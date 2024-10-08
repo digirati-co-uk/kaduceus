@@ -1,0 +1,21 @@
+[package]
+name = "kdurs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cxx = { version = "1", features = ["c++17"] }
+tokio = { version = "1", features = ["rt-multi-thread", "io-std", "io-util"]}
+[profile.dev]
+opt-level = 1
+
+[profile.dist]
+inherits = "release"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+
+[build-dependencies]
+cc = { version = "1", features = ["parallel"] }
+cxx-build = { version = "1", features = ["parallel"] }

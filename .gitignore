@@ -1,0 +1,7 @@
+/target
+/kakadu
+/kakadu-*
+
+*.obj
+
+compile_commands.json
