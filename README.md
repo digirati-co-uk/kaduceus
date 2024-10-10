@@ -9,9 +9,9 @@
 
 ## Key Features
 
-- **Asynchronous IO:** All IO work submitted during decompression is performed asynchronously IO, allowing readers and writers to overlap with decoding and maximize use of system resources.
+- **Asynchronous IO:** All IO work submitted during decompression is scheduled to run asynchronously, allowing decoding to overlap with readers/writers and maximize use of system resources.
 
-- **Build-time optimization:** kdurs opts into all available build-time optimizations where appropriate. This results in a wide range of platform-specific build targets but significantly improves performance.
+- **Build-time optimization:** kdurs opts into all available build-time optimizations where appropriate. This results in significantly improved performance at the cost of a wide range of platform-specific build targets.
 
   - **LTO (Link-time optimization):** Enables whole-program optimization, spanning both Rust and C++ code, resulting in smaller executable sizes and improved runtime efficiency.
   - **PGO (Profile-guided optimization):** Analyzes code execution patterns from runtime profiling data to identify hot spots and optimize them for faster execution.

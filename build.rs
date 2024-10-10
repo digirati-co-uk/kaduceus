@@ -94,15 +94,6 @@ fn main() {
         "apps/compressed_io",
     ];
 
-    let is_debug_build = match std::env::var("PROFILE").as_ref().map(String::as_str) {
-        Ok("release") => false,
-        Err(e) => {
-            eprintln!("Failed to detect build profile, defaulting to debug. {e}");
-            true
-        }
-        _ => true,
-    };
-
     let mut build = cxx_build::bridge("src/lib.rs");
 
     build.std("c++20");
@@ -123,9 +114,6 @@ fn main() {
     build.flag("-mfma");
     build.flag("-ffast-math");
 
-    // Enable Callsite-profile-guided optimization
-    build.flag("-fcs-profile-generate");
-
     for flag in rustflags::from_env() {
         match flag {
             Flag::Codegen {
@@ -137,6 +125,10 @@ fn main() {
                 } else {
                     build.flag(format!("-mcpu={}", cpu));
                 }
+            }
+            Flag::Codegen { opt, .. } if opt == "linker-plugin-lto" => {
+                println!("cargo:warning=LTO is enabled");
+                build.flag("-flto");
             }
             _ => continue,
         }
@@ -151,10 +143,6 @@ fn main() {
             build.flag("-mfloat-abi=soft");
             build.define("KDU_NEON_INTRINSICS", None);
         }
-    }
-
-    for flag in &["-flto"] {
-        build.flag(flag);
     }
 
     build.flag("-Wno-everything");

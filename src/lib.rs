@@ -1,12 +1,19 @@
-use cxx::UniquePtr;
-use ffi::{Info, LogLevel, Region};
+#![warn(
+    clippy::all,
+    clippy::perf,
+    clippy::style,
+    clippy::panic,
+    clippy::unwrap_used
+)]
+use ffi::LogLevel;
 use std::pin::Pin;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek};
+use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::runtime::Builder;
-use tracing::{debug, error, info, info_span, span, trace, warn, Instrument, Level};
+use tracing::{debug, error, info, info_span, trace, warn, Instrument};
 
 #[cxx::bridge(namespace = "digirati::kdurs")]
-pub mod ffi {
+#[allow(warnings)]
+mod ffi {
     #[derive(Debug, Eq, PartialEq)]
     enum LogLevel {
         Debug,
@@ -65,6 +72,8 @@ pub mod ffi {
     }
 }
 
+pub use ffi::{Info, Region};
+
 pub fn log(level: LogLevel, message: &str) {
     match level {
         LogLevel::Debug => debug!(target: "kakadu", message),
@@ -122,12 +131,10 @@ impl KakaduImageReader {
     }
 
     pub fn decompress(&mut self, region: Region) -> KakaduDecompressor {
-        self.span.in_scope(|| {
-            let inner_span = info_span!("decompress", region = ?region);
-            let inner_decompressor = self.inner.pin_mut().decompress(&region);
+        let inner_span = info_span!(parent: self.span.clone(), "decompress", region = ?region);
+        let inner_decompressor = self.inner.pin_mut().decompress(&region);
 
-            KakaduDecompressor::new(inner_decompressor, inner_span)
-        })
+        KakaduDecompressor::new(inner_decompressor, inner_span)
     }
 
     pub fn info(&mut self) -> ffi::Info {
