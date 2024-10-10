@@ -1,18 +1,14 @@
 #include "kakadu_rs.h"
 #include "kdu_compressed.h"
-#include "kdu_messaging.h"
 #include "kdu_region_decompressor.h"
 #include "kdurs/src/lib.rs.h"
 
 #include <format>
 #include <stdexcept>
 
-#include "kakadu_logger_private.h"
 
 namespace digirati::kdurs {
 
-static KakaduLogger warnings(LogLevel::Warning);
-static KakaduLogger errors(LogLevel::Error);
 
 AsyncReaderCompressedSource::AsyncReaderCompressedSource(rust::Box<AsyncReader>& reader)
     : reader_(std::move(reader))
@@ -35,22 +31,7 @@ kdu_core::kdu_long AsyncReaderCompressedSource::fetch_data(kdu_core::kdu_long ma
     return static_cast<ssize_t>(read);
 }
 
-KakaduContext::KakaduContext(ssize_t memory_limit, size_t threads)
-    : membroker(memory_limit)
-{
-    kdu_core::kdu_customize_warnings(&warnings);
-    kdu_core::kdu_customize_errors(&errors);
 
-    if (threads > 0) {
-        threading_env.create();
-
-        for (auto i = 0; i < threads; i++) {
-            threading_env.add_thread();
-        }
-
-        threading_env.attach_queue(&threading_queue, nullptr, "root_work_queue");
-    }
-}
 
 std::unique_ptr<KakaduDecompressor> KakaduImageReader::decompress(const struct Region& region)
 {

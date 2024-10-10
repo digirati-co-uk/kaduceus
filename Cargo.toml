@@ -32,3 +32,4 @@ tracing-subscriber = "0.3"
 [build-dependencies]
 cxx-build = { version = "1", features = ["parallel"] }
 rustflags = { version = "0.1" }
+glob = { version = "0.3" }

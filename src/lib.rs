@@ -97,6 +97,7 @@ impl Default for KakaduContext {
     }
 }
 
+#[allow(dead_code)]
 pub struct KakaduDecompressor {
     pub(crate) inner: cxx::UniquePtr<ffi::KakaduDecompressor>,
     pub(crate) span: tracing::Span,

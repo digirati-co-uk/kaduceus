@@ -1,3 +1,4 @@
+use glob::glob;
 use rustflags::Flag;
 use std::path::PathBuf;
 
@@ -148,8 +149,18 @@ fn main() {
     build.flag("-Wno-everything");
     build.compile("kdurs");
 
+    let source_files = glob("src/*.cc").expect("failed to get sources");
+    let headers = glob("src/*.h").expect("failed to get headers");
+    let all = source_files.chain(headers).filter_map(|file| file.ok());
+
+    for file in all {
+        if file.extension().is_some_and(|ext| ext == "cc") {
+            build.file(&file);
+        }
+
+        let source_path = file.to_string_lossy();
+        println!("cargo::rerun-if-changed={source_path}");
+    }
+
     println!("cargo::rerun-if-changed=src/lib.rs");
-    println!("cargo::rerun-if-changed=src/kakadu_rs.cc");
-    println!("cargo::rerun-if-changed=src/kakadu_rs.h");
-    println!("cargo::rerun-if-changed=src/kakadu_logger_private.h");
 }

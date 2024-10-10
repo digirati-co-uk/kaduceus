@@ -2,6 +2,9 @@
 #define KAKADU_RS_H
 
 #include "rust/cxx.h"
+#include "kakadu_context.h"
+#include "kakadu_decompressor.h"
+#include "kakadu_image_reader.h"
 
 #include <jpx.h>
 #include <kdu_compressed.h>
@@ -23,18 +26,6 @@ private:
     rust::Box<AsyncReader> reader_;
 };
 
-class KakaduContext final {
-    friend class KakaduImageReader;
-    friend class KakaduDecompressor;
-
-public:
-    explicit KakaduContext(ssize_t memory_limit = -1, size_t threads = std::thread::hardware_concurrency());
-
-private:
-    kdu_core::kdu_membroker membroker;
-    kdu_core::kdu_thread_queue threading_queue;
-    kdu_core::kdu_thread_env threading_env;
-};
 
 class KakaduDecompressor final {
 public:
