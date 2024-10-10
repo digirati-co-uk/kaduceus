@@ -7,9 +7,9 @@ pub enum Arch {
 }
 
 fn main() {
-    let kdu_root = Some("/home/gtierney/CLionProjects/untitled1/kakadu/v8_4_1-01787L")
+    let kdu_root = std::env::var("KDU_ROOT")
         .map(PathBuf::from)
-        .expect("KDU_ROOT environment variable not set");
+        .unwrap_or(PathBuf::from("kakadu"));
 
     let target = std::env::var("TARGET").expect("target env var not set");
     let arch = match target.as_str() {
