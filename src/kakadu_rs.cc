@@ -5,14 +5,11 @@
 #include "kdurs/src/lib.rs.h"
 
 #include <format>
-#include <iostream>
 #include <stdexcept>
 
 #include "kakadu_logger_private.h"
 
 namespace digirati::kdurs {
-
-
 
 static KakaduLogger warnings(LogLevel::Warning);
 static KakaduLogger errors(LogLevel::Error);

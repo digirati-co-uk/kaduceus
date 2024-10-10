@@ -3,7 +3,7 @@ use ffi::{Info, LogLevel, Region};
 use std::pin::Pin;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeek};
 use tokio::runtime::Builder;
-use tracing::{debug, error, info, info_span, span, trace, warn, Level};
+use tracing::{debug, error, info, info_span, span, trace, warn, Instrument, Level};
 
 #[cxx::bridge(namespace = "digirati::kdurs")]
 pub mod ffi {
@@ -67,11 +67,11 @@ pub mod ffi {
 
 pub fn log(level: LogLevel, message: &str) {
     match level {
-        LogLevel::Debug => debug!(message),
-        LogLevel::Info => info!(message),
-        LogLevel::Warning => warn!(message),
-        LogLevel::Error => error!(message),
-        _ => trace!(message),
+        LogLevel::Debug => debug!(target: "kakadu", message),
+        LogLevel::Info => info!(target: "kakadu", message),
+        LogLevel::Warning => warn!(target: "kakadu", message),
+        LogLevel::Error => error!(target: "kakadu", message),
+        _ => trace!(target: "kakadu", message),
     };
 }
 
@@ -113,9 +113,10 @@ impl KakaduImageReader {
         input: impl AsyncRead + 'static,
         image_name: Option<String>,
     ) -> KakaduImageReader {
-        let input_reader = Box::new(AsyncReader::new(input));
-        let inner = ffi::create_kakadu_image_reader(ctx.inner, input_reader);
         let span = info_span!("image_reader", image_name = image_name);
+        let read_span = info_span!(parent: &span, "read", requested = tracing::field::Empty);
+        let input_reader = Box::new(AsyncReader::new(input, read_span));
+        let inner = ffi::create_kakadu_image_reader(ctx.inner, input_reader);
 
         Self { span, inner }
     }
@@ -139,25 +140,32 @@ impl KakaduImageReader {
 
 pub struct AsyncReader {
     stream: Pin<Box<dyn AsyncRead>>,
+    span: tracing::Span,
 }
 
 impl AsyncReader {
-    pub fn new<R: AsyncRead + 'static>(source: R) -> Self {
+    pub fn new<R: AsyncRead + 'static>(source: R, span: tracing::Span) -> Self {
         Self {
             stream: Box::pin(source),
+            span,
         }
     }
 }
 
 impl AsyncReader {
     pub fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
-        info!("Reading {} bytes", buffer.len());
+        self.span.in_scope(|| {
+            self.span.record("requested", buffer.len());
 
-        let task = async { self.stream.read(buffer).await };
+            let rt = Builder::new_current_thread()
+                .build()
+                .expect("failed to construct lightweight runtime");
 
-        let rt = Builder::new_current_thread()
-            .build()
-            .expect("failed to construct runtime");
-        rt.block_on(task)
+            let task = async { self.stream.read(buffer).await }.instrument(self.span.clone());
+
+            rt.block_on(task)
+                .inspect(|size| info!(size, "read fulfilled"))
+                .inspect_err(|err| error!(?err, "read failed"))
+        })
     }
 }

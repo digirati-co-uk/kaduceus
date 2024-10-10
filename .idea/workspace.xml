@@ -20,30 +20,7 @@
   <component name="ChangeListManager">
     <list default="true" id="2f417314-bda5-48bc-b0de-3103bbda4704" name="Changes" comment="">
       <change afterPath="$USER_HOME$/CLionProjects/untitled1/.idea/untitled1.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.clang-format" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/kakadu_context.cc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/kakadu_context.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/kakadu_decompressor.cc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/kakadu_decompressor.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/kakadu_image_reader.cc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/kakadu_image_reader.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/kakadu_logger_private.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/image_info.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/editor.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/editor.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/kdurs2.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.rs" beforeDir="false" afterPath="$PROJECT_DIR$/build.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/kakadu_rs.cc" beforeDir="false" afterPath="$PROJECT_DIR$/src/kakadu_rs.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/kakadu_rs.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/kakadu_rs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -185,7 +162,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1728533828122</updated>
-      <workItem from="1728533829689" duration="3161000" />
+      <workItem from="1728533829689" duration="4320000" />
     </task>
     <servers />
   </component>
