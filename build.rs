@@ -1,9 +1,22 @@
+use rustflags::Flag;
 use std::path::PathBuf;
+
+pub enum Arch {
+    X64,
+    Arm,
+}
 
 fn main() {
     let kdu_root = Some("/home/gtierney/CLionProjects/untitled1/kakadu/v8_4_1-01787L")
         .map(PathBuf::from)
         .expect("KDU_ROOT environment variable not set");
+
+    let target = std::env::var("TARGET").expect("target env var not set");
+    let arch = match target.as_str() {
+        "x86_64-unknown-linux-gnu" => Arch::X64,
+        "aarch64-unknown-linux-gnu" => Arch::Arm,
+        _ => panic!(),
+    };
 
     let kdu_coresys_sources = &[
         "coresys/kernels/kernels.cpp",
@@ -56,23 +69,21 @@ fn main() {
         "coresys/compressed/codestream.cpp",
         "coresys/common/kdu_arch.cpp",
         "apps/jp2/jp2.cpp",
+        "apps/jp2/jpx.cpp",
         "apps/compressed_io/file_io.cpp",
+        "apps/client_server/kdu_client_window.cpp",
         "apps/support/kdu_stripe_decompressor.cpp",
-        "apps/support/avx2_region_compositor.cpp",
         "apps/support/ssse3_stripe_transfer.cpp",
         "apps/support/avx2_region_decompressor.cpp",
         "apps/support/kdu_stream_decompressor.cpp",
         "apps/support/neon_stripe_transfer.cpp",
         "apps/support/supp_local.cpp",
         "apps/support/kdu_stripe_compressor.cpp",
-        "apps/support/kdu_region_animator.cpp",
-        "apps/support/neon_region_compositor.cpp",
         "apps/support/kdu_region_decompressor.cpp",
         "apps/support/ssse3_region_decompressor.cpp",
         "apps/support/sse4_region_decompressor.cpp",
         "apps/support/avx2_stripe_transfer.cpp",
         "apps/support/neon_region_decompressor.cpp",
-        "apps/support/kdu_region_compositor.cpp",
     ];
 
     let kdu_includes = &[
@@ -80,7 +91,7 @@ fn main() {
         "coresys/shared",
         "apps/support",
         "apps/jp2",
-        "apps/compressed_io"
+        "apps/compressed_io",
     ];
 
     let is_debug_build = match std::env::var("PROFILE").as_ref().map(String::as_str) {
@@ -94,27 +105,63 @@ fn main() {
 
     let mut build = cxx_build::bridge("src/lib.rs");
 
+    build.std("c++20");
     build.files(kdu_coresys_sources.map(|path| kdu_root.join(path)));
     build.includes(kdu_includes.map(|path| kdu_root.join(path)));
-    build.define("KDU_SIMD_OPTIMIZATIONS", "1");
-    build.define("KDU_X86_INTRINSICS", "1");
-    build.file("src/kakadu_rs.cc");
+    build.define("KDU_SIMD_OPTIMIZATIONS", None);
+    build.files(&[
+        "src/kakadu_rs.cc",
+        // "src/kakadu_context.cc",
+        // "src/kakadu_decompressor.cc",
+        // "src/kakadu_image_reader.cc",
+    ]);
 
     // If not present, no overrides.
     let _ = build.try_flags_from_environment("KDU_CXXFLAGS");
 
-    build.flag("-mavx2");
+    // Enable fused multiply-add, and enable fast-math to make sure code benefits from it.
     build.flag("-mfma");
+    build.flag("-ffast-math");
 
-    if !is_debug_build {
-        for flag in &["-flto", "-ffat-lto-objects", "-funified-lto"] {
-            build.flag(flag);
+    // Enable Callsite-profile-guided optimization
+    build.flag("-fcs-profile-generate");
+
+    for flag in rustflags::from_env() {
+        match flag {
+            Flag::Codegen {
+                opt,
+                value: Some(cpu),
+            } if opt == "target-cpu" => {
+                if cpu == "native" {
+                    build.flag("-march=native");
+                } else {
+                    build.flag(format!("-mcpu={}", cpu));
+                }
+            }
+            _ => continue,
         }
     }
 
+    match arch {
+        Arch::X64 => {
+            build.flag("-mavx2");
+            build.define("KDU_X86_INTRINSICS", None);
+        }
+        Arch::Arm => {
+            build.flag("-mfloat-abi=soft");
+            build.define("KDU_NEON_INTRINSICS", None);
+        }
+    }
+
+    for flag in &["-flto"] {
+        build.flag(flag);
+    }
+
+    build.flag("-Wno-everything");
     build.compile("kdurs");
 
     println!("cargo::rerun-if-changed=src/lib.rs");
     println!("cargo::rerun-if-changed=src/kakadu_rs.cc");
     println!("cargo::rerun-if-changed=src/kakadu_rs.h");
+    println!("cargo::rerun-if-changed=src/kakadu_logger_private.h");
 }

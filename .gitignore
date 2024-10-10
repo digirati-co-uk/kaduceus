@@ -1,7 +1,7 @@
 /target
 /kakadu
 /kakadu-*
-
+/.cache/
 *.obj
 
 compile_commands.json
