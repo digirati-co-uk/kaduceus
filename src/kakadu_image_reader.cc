@@ -1,6 +1,8 @@
 #include "kakadu_image_reader.h"
 #include "kaduceus/src/lib.rs.h"
 
+#include <format>
+
 namespace digirati::kaduceus {
 
 std::unique_ptr<KakaduDecompressor> KakaduImageReader::decompress(const struct Region& region)
