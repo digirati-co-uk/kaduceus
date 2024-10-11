@@ -36,7 +36,7 @@ jobs:
         with:
           prefix-key: 'v0-rust-${{ matrix.build_configuration.target }}'
 
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
           targets: ${{ matrix.build_configuration.target }}
