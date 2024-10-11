@@ -29,6 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.KAKADU_SSH_KEY }}
+          persist-credentials: 'true'
           submodules: 'true'
           set-safe-directory: 'true'
 
