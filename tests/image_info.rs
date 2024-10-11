@@ -1,31 +1,47 @@
-use kaduceus::{AsyncReader, Info, KakaduContext, KakaduImageReader};
+use std::path::{Path, PathBuf};
 
-#[test]
-fn test_gold_images() {
-    tracing_subscriber::fmt::init();
+use insta::assert_debug_snapshot;
+use kaduceus::{Info, KakaduContext, KakaduImageReader};
 
+fn image_path(name: &str) -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push(name);
+
+    path
+}
+
+fn image_info<P: AsRef<Path>>(path: P) -> Info {
+    let path = path.as_ref();
     let rt = tokio::runtime::Builder::new_current_thread()
         .build()
-        .unwrap();
+        .expect("test must not be run from an async context");
 
-    let file = rt.block_on(async move {
-        tokio::fs::File::open("/home/gtierney/Downloads/reference.jp2")
-            .await
-            .unwrap()
-    });
+    let filename = path
+        .file_name()
+        .map(|str| str.to_string_lossy())
+        .unwrap_or("unknown".into());
+
+    let file = rt.block_on(async move { tokio::fs::File::open(path).await.unwrap() });
 
     let ctx = KakaduContext::default();
-    let mut reader = KakaduImageReader::new(ctx, file, Some("my_image.jp2".into()));
-    let info = reader.info();
+    let mut reader = KakaduImageReader::new(ctx, file, Some(filename.into()));
 
-    assert_eq!(
-        Info {
-            width: 2717,
-            height: 3701,
-            tile_width: 2717,
-            tile_height: 3701,
-            dwt_levels: 5,
-        },
-        info
-    );
+    reader.info()
+}
+
+fn test_image_info(name: &str) {
+    let mut settings = insta::Settings::clone_current();
+    settings.set_snapshot_suffix(name);
+
+    let _guard = settings.bind_to_scope();
+
+    let image_path = image_path(name);
+    let image_info = image_info(image_path);
+
+    assert_debug_snapshot!(image_info);
+}
+
+#[test]
+fn test_reference_image() {
+    test_image_info("testdata/reference.jp2");
 }

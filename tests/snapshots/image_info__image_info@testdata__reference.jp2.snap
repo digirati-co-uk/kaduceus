@@ -1,0 +1,11 @@
+---
+source: tests/image_info.rs
+expression: image_info
+---
+Info {
+    width: 2717,
+    height: 3701,
+    tile_width: 1024,
+    tile_height: 1024,
+    dwt_levels: 5,
+}
