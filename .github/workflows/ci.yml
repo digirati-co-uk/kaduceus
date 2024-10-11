@@ -28,12 +28,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ssh-key: ${{ secrets.KAKADU_SSH_KEY }}
-          persist-credentials: 'true'
           submodules: 'false'
           set-safe-directory: 'true'
 
+      - name: Setup SSH Keys and known_hosts
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.KAKADU_SSH_KEY }}"
+
       - run: git submodule update --init
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
 
       - uses: swatinem/rust-cache@v2
         with:
