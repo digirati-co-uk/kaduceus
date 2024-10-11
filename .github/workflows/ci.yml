@@ -30,8 +30,10 @@ jobs:
         with:
           ssh-key: ${{ secrets.KAKADU_SSH_KEY }}
           persist-credentials: 'true'
-          submodules: 'true'
+          submodules: 'false'
           set-safe-directory: 'true'
+
+      - run: git submodule update --init
 
       - uses: swatinem/rust-cache@v2
         with:
