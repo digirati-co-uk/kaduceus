@@ -17,7 +17,7 @@ jobs:
         build_configuration:
           - target: x86_64-unknown-linux-gnu
             cpu: native
-    runs-on: ubuntu-24.04 [Beta]
+    runs-on: ubuntu-24.04
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ matrix.build_configuration.target }}-${{ matrix.build_configuration.cpu }}
       cancel-in-progress: true
