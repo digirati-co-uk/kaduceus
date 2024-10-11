@@ -55,7 +55,7 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo llvm-cov nextest --target ${{ matrix.build_configuration.target }} --release
+          cargo llvm-cov nextest --target ${{ matrix.build_configuration.target }}
           cargo llvm-cov report --lcov --output-path lcov.info
           cargo llvm-cov --text  >> $GITHUB_STEP_SUMMARY
         env:
