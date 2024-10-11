@@ -131,7 +131,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kdurs"
+name = "kaduceus"
 version = "0.1.0"
 dependencies = [
  "cxx",

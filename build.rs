@@ -101,12 +101,6 @@ fn main() {
     build.files(kdu_coresys_sources.map(|path| kdu_root.join(path)));
     build.includes(kdu_includes.map(|path| kdu_root.join(path)));
     build.define("KDU_SIMD_OPTIMIZATIONS", None);
-    build.files(&[
-        "src/kakadu_rs.cc",
-        // "src/kakadu_context.cc",
-        // "src/kakadu_decompressor.cc",
-        // "src/kakadu_image_reader.cc",
-    ]);
 
     // If not present, no overrides.
     let _ = build.try_flags_from_environment("KDU_CXXFLAGS");
@@ -147,7 +141,6 @@ fn main() {
     }
 
     build.flag("-Wno-everything");
-    build.compile("kdurs");
 
     let source_files = glob("src/*.cc").expect("failed to get sources");
     let headers = glob("src/*.h").expect("failed to get headers");
@@ -163,4 +156,6 @@ fn main() {
     }
 
     println!("cargo::rerun-if-changed=src/lib.rs");
+
+    build.compile("kaduceus");
 }

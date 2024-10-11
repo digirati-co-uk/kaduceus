@@ -2,7 +2,7 @@
 
 #include <kdu_compressed.h>
 
-namespace digirati::kdurs {
+namespace digirati::kaduceus {
 
 class KakaduContext final {
     friend class KakaduImageReader;

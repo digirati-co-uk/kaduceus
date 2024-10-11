@@ -11,7 +11,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::runtime::Builder;
 use tracing::{debug, error, info, info_span, trace, warn, Instrument};
 
-#[cxx::bridge(namespace = "digirati::kdurs")]
+#[cxx::bridge(namespace = "digirati::kaduceus")]
 #[allow(warnings)]
 mod ffi {
     #[derive(Debug, Eq, PartialEq)]
@@ -49,7 +49,7 @@ mod ffi {
 
     // C++ types and signatures exposed to Rust.
     unsafe extern "C++" {
-        include!("kdurs/src/kakadu_rs.h");
+        include!("kaduceus/src/kaduceus.h");
 
         type KakaduDecompressor;
 

@@ -1,4 +1,4 @@
-use kdurs::{ffi::Info, AsyncReader, KakaduContext, KakaduImageReader};
+use kaduceus::{AsyncReader, Info, KakaduContext, KakaduImageReader};
 
 #[test]
 fn test_gold_images() {
@@ -9,13 +9,12 @@ fn test_gold_images() {
         .unwrap();
 
     let file = rt.block_on(async move {
-        tokio::fs::File::open("testdata/kakadu71.jp2")
+        tokio::fs::File::open("/home/gtierney/Downloads/reference.jp2")
             .await
             .unwrap()
     });
 
     let ctx = KakaduContext::default();
-
     let mut reader = KakaduImageReader::new(ctx, file, Some("my_image.jp2".into()));
     let info = reader.info();
 

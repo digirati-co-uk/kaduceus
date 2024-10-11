@@ -3,7 +3,7 @@
 #include "kakadu_logger_private.h"
 #include <mutex>
 
-namespace digirati::kdurs {
+namespace digirati::kaduceus {
 
 std::once_flag logging_initialized;
 

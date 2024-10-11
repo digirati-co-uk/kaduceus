@@ -4,9 +4,9 @@
 #include <sstream>
 #include <sys/types.h>
 
-#include "kdurs/src/lib.rs.h"
+#include "kaduceus/src/lib.rs.h"
 
-namespace digirati::kdurs {
+namespace digirati::kaduceus {
 
 class KakaduLogger : public kdu_core::kdu_thread_safe_message {
 public:
