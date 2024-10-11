@@ -15,11 +15,8 @@ jobs:
     strategy:
       matrix:
         build_configuration:
-          - target: aarch64-unknown-linux-gnu
-            cpu: neoverse-v2
-
           - target: x86_64-unknown-linux-gnu
-            cpu: znver4
+            cpu: native
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ matrix.build_configuration.target }}-${{ matrix.build_configuration.cpu }}
@@ -52,4 +49,6 @@ jobs:
           targets: ${{ matrix.build_configuration.target }}
 
       - name: Run build
-        run: cargo build --target ${{ matrix.build_configuration.target }} --profile dist -- -Ctarget-cpu=${{ matrix.build_configuration.cpu }}
+        run: cargo build --target ${{ matrix.build_configuration.target }} --profile dist
+        env:
+          RUSTFLAGS: "-Ctarget-cpu=${{ matrix.build_configuration.cpu }}"
