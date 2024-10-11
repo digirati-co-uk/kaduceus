@@ -4,5 +4,7 @@
     <mapping directory="" vcs="Git" />
     <mapping directory="$USER_HOME$/CLionProjects/untitled1" vcs="Git" />
     <mapping directory="$USER_HOME$/CLionProjects/untitled1/kakadu/v8_4_1-01787L" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kakadu" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/target/debug/build/kaduceus-ed49b526459f301c/out/cxxbridge/crate/kaduceus" vcs="Git" />
   </component>
 </project>
