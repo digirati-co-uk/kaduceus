@@ -52,6 +52,4 @@ jobs:
           targets: ${{ matrix.build_configuration.target }}
 
       - name: Run build
-        run: cargo build --target ${{ matrix.build_configuration.target }} --profile dist
-        env:
-          RUSTFLAGS: "-Ctarget-cpu=${{ matrix.build_configuration.cpu }}"
+        run: cargo build --target ${{ matrix.build_configuration.target }} --profile dist -- -Ctarget-cpu=${{ matrix.build_configuration.cpu }}
