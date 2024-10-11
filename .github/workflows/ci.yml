@@ -48,7 +48,12 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.build_configuration.target }}
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
       - name: Run build
-        run: cargo build --target ${{ matrix.build_configuration.target }} --profile dist
+        run: cargo nextest run --target ${{ matrix.build_configuration.target }} --profile dist
         env:
           RUSTFLAGS: "-Ctarget-cpu=${{ matrix.build_configuration.cpu }}"
+          CARGO_TERM_COLOR: always
