@@ -38,7 +38,7 @@ jobs:
       - run: git submodule update --init
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-          
+
       - uses: swatinem/rust-cache@v2
         with:
           prefix-key: 'v0-rust-${{ matrix.build_configuration.target }}-${{ matrix.build_configuration.cpu }}'
@@ -47,13 +47,17 @@ jobs:
         with:
           toolchain: stable
           targets: ${{ matrix.build_configuration.target }}
+          components: llvm-tools-preview
 
       - uses: taiki-e/install-action@v2
         with:
-          tool: nextest
+          tool: nextest, cargo-llvm-cov
 
-      - name: Run build
-        run: cargo nextest run --target ${{ matrix.build_configuration.target }} --release
+      - name: Run tests
+        run: |
+          cargo llvm-cov nextest run --target ${{ matrix.build_configuration.target }} --release
+          cargo llvm-cov report --lcov --output-path lcov.info
+          cargo llvm-cov --text  >> $GITHUB_STEP_SUMMARY
         env:
           RUSTFLAGS: "-Ctarget-cpu=${{ matrix.build_configuration.cpu }}"
           CARGO_TERM_COLOR: always
