@@ -42,6 +42,7 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           prefix-key: 'v0-rust-${{ matrix.build_configuration.target }}-${{ matrix.build_configuration.cpu }}'
+          cache-on-failure: true
 
       - uses: dtolnay/rust-toolchain@v1
         with:
