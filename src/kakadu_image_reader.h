@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+
 #include <kdu_compressed.h>
 
 #include "data_source.h"

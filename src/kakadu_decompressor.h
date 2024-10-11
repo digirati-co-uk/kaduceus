@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <kdu_compressed.h>
 #include <kdu_region_decompressor.h>
 

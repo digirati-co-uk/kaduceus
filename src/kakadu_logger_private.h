@@ -1,8 +1,9 @@
 #pragma once
 
-#include <kdu_messaging.h>
 #include <sstream>
 #include <sys/types.h>
+
+#include <kdu_messaging.h>
 
 #include "kaduceus/src/lib.rs.h"
 
