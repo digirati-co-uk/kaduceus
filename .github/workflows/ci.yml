@@ -22,7 +22,7 @@ jobs:
             cpu: znver4
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ matrix.build_configuration.target }}-${{ matrix.build_configuration.cpu }}
       cancel-in-progress: true
     steps:
       - name: Checkout
