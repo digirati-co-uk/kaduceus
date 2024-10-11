@@ -55,13 +55,12 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo llvm-cov nextest $LLVM_COV_ARGS
-          cargo llvm-cov report $LLVM_COV_ARGS --lcov --output-path lcov.info
-          cargo llvm-cov report $LLVM_COV_ARGS --json | llvm-cov-pretty --output-dir coverage-report
+          cargo llvm-cov nextest --ignore-filename-regex 'kakadu/' --target ${{ matrix.build_configuration.target }} --include-ffi
+          cargo llvm-cov report --ignore-filename-regex 'kakadu/' --target ${{ matrix.build_configuration.target }} --include-ffi --lcov --output-path lcov.info
+          cargo llvm-cov report --ignore-filename-regex 'kakadu/' --target ${{ matrix.build_configuration.target }} --include-ffi --json | llvm-cov-pretty --output-dir coverage-report
         env:
           RUSTFLAGS: "-Ctarget-cpu=${{ matrix.build_configuration.cpu }}"
           CARGO_TERM_COLOR: always
-          LLVM_COV_ARGS: --ignore-filename-regex 'kakadu/' --target ${{ matrix.build_configuration.target }} --include-ffi
 
       - name: Upload coverage report
         id: deployment
