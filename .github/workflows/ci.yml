@@ -10,17 +10,14 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
-    strategy:
-      matrix:
-        build_configuration:
-          - target: x86_64-unknown-linux-gnu
-            cpu: native
+  test:
+    name: Test
     runs-on: ubuntu-24.04
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ matrix.build_configuration.target }}-${{ matrix.build_configuration.cpu }}
-      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,7 +38,6 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          prefix-key: 'v0-rust-${{ matrix.build_configuration.target }}-${{ matrix.build_configuration.cpu }}'
           cache-on-failure: true
 
       - uses: dtolnay/rust-toolchain@v1
@@ -56,12 +52,11 @@ jobs:
 
       - name: Run tests
         run: |
-          LLVM_COV_ARGS=(--ignore-filename-regex 'kakadu/' --target ${{ matrix.build_configuration.target }} --include-ffi)
+          LLVM_COV_ARGS=(--ignore-filename-regex 'kakadu/' --include-ffi)
           cargo llvm-cov nextest "${LLVM_COV_ARGS[@]}"
           cargo llvm-cov report "${LLVM_COV_ARGS[@]}" --lcov --output-path lcov.info
           cargo llvm-cov report "${LLVM_COV_ARGS[@]}" --html
         env:
-          RUSTFLAGS: "-Ctarget-cpu=${{ matrix.build_configuration.cpu }}"
           CARGO_TERM_COLOR: always
 
       - name: Upload coverage report
@@ -70,6 +65,33 @@ jobs:
         with:
           path: target/llvm-cov/html
 
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: clippy-sarif, sarif-fmt
+      - run: cargo clippy --workspace --all-targets --all-features -- -Aunused --message-format=json | clippy-sarif | tee results.sarif | sarif-fmt
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: results.sarif
+
+  fmt:
+    name: Formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo +nightly fmt --all --check
+
   deploy:
     permissions:
       id-token: write
@@ -77,8 +99,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
+    runs-on: ubuntu-24.04
+    needs: test
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
