@@ -77,10 +77,11 @@ jobs:
         with:
           tool: clippy-sarif, sarif-fmt
       - run: cargo clippy --workspace --all-targets --all-features -- -Aunused --message-format=json | clippy-sarif | tee results.sarif | sarif-fmt
-      - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v1
-        with:
-          sarif_file: results.sarif
+    # Requires GitHub Advanced Security
+    # - name: Upload SARIF file
+    #   uses: github/codeql-action/upload-sarif@v1
+    #   with:
+    #     sarif_file: results.sarif
 
   fmt:
     name: Formatting
