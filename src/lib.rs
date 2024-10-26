@@ -5,8 +5,9 @@
     clippy::panic,
     clippy::unwrap_used
 )]
-use ffi::LogLevel;
 use std::pin::Pin;
+
+use ffi::LogLevel;
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::runtime::Builder;
 use tracing::{debug, error, info, info_span, trace, warn, Instrument};
@@ -74,6 +75,9 @@ mod ffi {
 
 pub use ffi::{Info, Region};
 
+unsafe impl Sync for ffi::KakaduContext {}
+unsafe impl Send for ffi::KakaduContext {}
+
 pub fn log(level: LogLevel, message: &str) {
     match level {
         LogLevel::Debug => debug!(target: "kakadu", message),
@@ -91,9 +95,7 @@ pub struct KakaduContext {
 
 impl Default for KakaduContext {
     fn default() -> Self {
-        Self {
-            inner: ffi::create_kakadu_context(),
-        }
+        Self { inner: ffi::create_kakadu_context() }
     }
 }
 
@@ -153,10 +155,7 @@ pub struct AsyncReader {
 
 impl AsyncReader {
     pub fn new<R: AsyncRead + 'static>(source: R, span: tracing::Span) -> Self {
-        Self {
-            stream: Box::pin(source),
-            span,
-        }
+        Self { stream: Box::pin(source), span }
     }
 }
 

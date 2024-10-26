@@ -1,6 +1,7 @@
+use std::path::PathBuf;
+
 use glob::glob;
 use rustflags::Flag;
-use std::path::PathBuf;
 
 pub enum Arch {
     X64,
@@ -111,10 +112,7 @@ fn main() {
 
     for flag in rustflags::from_env() {
         match flag {
-            Flag::Codegen {
-                opt,
-                value: Some(cpu),
-            } if opt == "target-cpu" => {
+            Flag::Codegen { opt, value: Some(cpu) } if opt == "target-cpu" => {
                 if cpu == "native" {
                     build.flag("-march=native");
                 } else {
