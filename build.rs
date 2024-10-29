@@ -110,7 +110,6 @@ fn main() {
     let _ = build.try_flags_from_environment("KDU_CXXFLAGS");
 
     // Enable fused multiply-add, and enable fast-math to make sure code benefits from it.
-    build.flag("-mfma");
     build.flag("-ffast-math");
     build.static_crt(true);
     build.static_flag(true);
@@ -127,6 +126,7 @@ fn main() {
     match arch {
         Arch::X64 => {
             build.flag("-mavx2");
+            build.flag("-mfma");
             build.define("KDU_X86_INTRINSICS", None);
         }
         Arch::Arm => {
