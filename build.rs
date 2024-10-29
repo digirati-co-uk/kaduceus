@@ -117,13 +117,6 @@ fn main() {
     
     for flag in rustflags::from_env() {
         match flag {
-            Flag::Codegen { opt, value: Some(cpu) } if opt == "target-cpu" => {
-                if cpu == "native" {
-                    build.flag("-Xclang=-march=native");
-                } else {
-                    build.flag(format!("-Xclang=-mcpu={}", cpu));
-                }
-            }
             Flag::Codegen { opt, .. } if opt == "linker-plugin-lto" => {
                 build.flag("-flto");
             }
@@ -137,7 +130,6 @@ fn main() {
             build.define("KDU_X86_INTRINSICS", None);
         }
         Arch::Arm => {
-            build.flag("-mfloat-abi=soft");
             build.define("KDU_NEON_INTRINSICS", None);
         }
     }
