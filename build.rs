@@ -99,9 +99,9 @@ fn main() {
     let mut build = cxx_build::bridge("src/lib.rs");
 
 
+    build.compiler("clang++");
     build.std("c++20");
     build.flag("-Wno-everything");
-    build.flag("-stdlib=libc++");
     build.files(kdu_coresys_sources.map(|path| kdu_root.join(path)));
     build.includes(kdu_includes.map(|path| kdu_root.join(path)));
     build.define("KDU_SIMD_OPTIMIZATIONS", None);
@@ -149,8 +149,6 @@ fn main() {
     }
 
     println!("cargo::rerun-if-changed=src/lib.rs");
-    println!("cargo::rustc-link-lib=c++abi");
-    println!("cargo::rustc-link-lib=c++");
 
     build.compile("kaduceus");
 }
