@@ -15,9 +15,9 @@ fn main() {
 
     let target = std::env::var("TARGET").expect("target env var not set");
     let arch = match target.as_str() {
-        "x86_64-unknown-linux-gnu" => Arch::X64,
-        "aarch64-unknown-linux-gnu" => Arch::Arm,
-        _ => panic!(),
+        "x86_64-unknown-linux-gnu" | "x86_64-apple-darwin" => Arch::X64,
+        "aarch64-unknown-linux-gnu" | "aarch64-apple-darwin" => Arch::Arm,
+        _ => panic!("unsupported target {target}"),
     };
 
     let kdu_coresys_sources = &[
@@ -98,7 +98,10 @@ fn main() {
 
     let mut build = cxx_build::bridge("src/lib.rs");
 
+
     build.std("c++20");
+    build.flag("-Wno-everything");
+    build.flag("-stdlib=libc++");
     build.files(kdu_coresys_sources.map(|path| kdu_root.join(path)));
     build.includes(kdu_includes.map(|path| kdu_root.join(path)));
     build.define("KDU_SIMD_OPTIMIZATIONS", None);
@@ -109,18 +112,19 @@ fn main() {
     // Enable fused multiply-add, and enable fast-math to make sure code benefits from it.
     build.flag("-mfma");
     build.flag("-ffast-math");
-
+    build.static_crt(true);
+    build.static_flag(true);
+    
     for flag in rustflags::from_env() {
         match flag {
             Flag::Codegen { opt, value: Some(cpu) } if opt == "target-cpu" => {
                 if cpu == "native" {
-                    build.flag("-march=native");
+                    build.flag("-Xclang=-march=native");
                 } else {
-                    build.flag(format!("-mcpu={}", cpu));
+                    build.flag(format!("-Xclang=-mcpu={}", cpu));
                 }
             }
             Flag::Codegen { opt, .. } if opt == "linker-plugin-lto" => {
-                println!("cargo:warning=LTO is enabled");
                 build.flag("-flto");
             }
             _ => continue,
@@ -138,7 +142,6 @@ fn main() {
         }
     }
 
-    build.flag("-Wno-everything");
 
     let source_files = glob("src/*.cc").expect("failed to get sources");
     let headers = glob("src/*.h").expect("failed to get headers");
@@ -154,6 +157,8 @@ fn main() {
     }
 
     println!("cargo::rerun-if-changed=src/lib.rs");
+    println!("cargo::rustc-link-lib=c++abi");
+    println!("cargo::rustc-link-lib=c++");
 
     build.compile("kaduceus");
 }
