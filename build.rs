@@ -137,7 +137,6 @@ fn main() {
             build.define("KDU_X86_INTRINSICS", None);
         }
         Arch::Arm => {
-            build.flag("-mfloat-abi=soft");
             build.define("KDU_NEON_INTRINSICS", None);
         }
     }
