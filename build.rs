@@ -118,9 +118,9 @@ fn main() {
         match flag {
             Flag::Codegen { opt, value: Some(cpu) } if opt == "target-cpu" => {
                 if cpu == "native" {
-                    build.flag("-Xclang=-march=native");
+                    build.flag("-march=native");
                 } else {
-                    build.flag(format!("-Xclang=-mcpu={}", cpu));
+                    build.flag(format!("-mcpu={}", cpu));
                 }
             }
             Flag::Codegen { opt, .. } if opt == "linker-plugin-lto" => {
