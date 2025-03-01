@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kdu_compressed.h>
+#include <kdu_cache.h>
 
 namespace digirati::kaduceus {
 

@@ -13,6 +13,7 @@ static KakaduLogger errors(LogLevel::Error);
 KakaduContext::KakaduContext(ssize_t memory_limit, size_t threads)
     : membroker(memory_limit)
 {
+
     std::call_once(logging_initialized, []() {
         kdu_core::kdu_customize_warnings(&warnings);
         kdu_core::kdu_customize_errors(&errors);

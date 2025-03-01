@@ -5,42 +5,36 @@
 
 namespace digirati::kaduceus {
 
-std::unique_ptr<KakaduDecompressor> KakaduImageReader::decompress(const struct Region& region)
+std::unique_ptr<KakaduDecompressor> KakaduImageReader::open(const struct Region& region)
 {
     kdu_core::kdu_dims dims;
     dims.from_u32(region.x, region.y, region.width, region.height);
 
-    kdu_core::kdu_codestream codestream;
-    codestream.create(&source, &ctx->threading_env, &ctx->membroker);
-    codestream.set_fast();
-
-    kdu_supp::kdu_channel_mapping channel_mapping;
-    channel_mapping.configure(&source, true);
-
-    return std::make_unique<KakaduDecompressor>(ctx, codestream, dims, channel_mapping);
+    return std::make_unique<KakaduDecompressor>(ctx, codestream, dims);
 }
 
 KakaduImageReader::KakaduImageReader(std::shared_ptr<KakaduContext> ctx, rust::Box<AsyncReader>& reader)
     : ctx(std::move(ctx))
     , compressed_source(reader)
+    ,  codestream()
 {
     family_source.open(&compressed_source, &ctx->membroker);
 
     if (!source.open(&family_source)) {
         throw std::runtime_error(std::format("JP2 source is not a valid image object"));
     }
-}
 
-Info KakaduImageReader::info()
-{
     if (!source.read_header()) {
         throw std::runtime_error("Unable to handle JP2 contents");
     }
 
-    kdu_core::kdu_codestream codestream;
-    codestream.create(&source, &ctx->threading_env, &ctx->membroker);
+    codestream.create(&source, &this->ctx->threading_env, &this->ctx->membroker);
+    codestream.set_fast();
     codestream.set_resilient();
+}
 
+Info KakaduImageReader::info()
+{
     kdu_supp::kdu_channel_mapping channel_mapping;
     channel_mapping.configure(&source, true);
 

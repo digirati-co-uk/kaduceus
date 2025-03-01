@@ -5,6 +5,7 @@
     clippy::panic,
     clippy::unwrap_used
 )]
+use std::error::Error;
 use std::pin::Pin;
 
 use ffi::LogLevel;
@@ -23,7 +24,7 @@ mod ffi {
         Error,
     }
 
-    #[derive(Debug, Eq, PartialEq)]
+    #[derive(Debug, Eq, PartialEq, Default)]
     struct Region {
         x: u32,
         y: u32,
@@ -53,6 +54,13 @@ mod ffi {
         include!("kaduceus/src/kaduceus.h");
 
         type KakaduDecompressor;
+        fn finish(self: Pin<&mut KakaduDecompressor>) -> bool;
+        fn process(
+            self: Pin<&mut KakaduDecompressor>,
+            data: &mut [i32],
+            output_region: &mut Region,
+        ) -> bool;
+
 
         type KakaduContext;
         fn create_kakadu_context() -> SharedPtr<KakaduContext>;
@@ -65,11 +73,8 @@ mod ffi {
 
         fn info(self: Pin<&mut KakaduImageReader>) -> Info;
 
-        fn decompress(
-            self: Pin<&mut KakaduImageReader>,
-            roi: &Region,
-        ) -> UniquePtr<KakaduDecompressor>;
-        // fn pull_stripes(self: Pin<&mut KakaduImageReader>) -> Result<usize>;
+        /// Opens the given [Region] of interest for decompression.
+        fn open(self: Pin<&mut KakaduImageReader>, roi: &Region) -> UniquePtr<KakaduDecompressor>;
     }
 }
 
@@ -95,7 +100,9 @@ pub struct KakaduContext {
 
 impl Default for KakaduContext {
     fn default() -> Self {
-        Self { inner: ffi::create_kakadu_context() }
+        Self {
+            inner: ffi::create_kakadu_context(),
+        }
     }
 }
 
@@ -111,6 +118,22 @@ impl KakaduDecompressor {
         span: tracing::Span,
     ) -> KakaduDecompressor {
         Self { inner, span }
+    }
+
+    pub fn process(&mut self, data: &mut [i32]) -> Result<Region, Box<dyn Error + 'static>> {
+        let _process_span = info_span!(parent: &self.span, "process");
+        let mut decompressor = self.inner.pin_mut();
+        let mut region = Region::default();
+
+        if decompressor.as_mut().process(data, &mut region) {
+            Ok(region)
+        } else {
+            if decompressor.finish() {
+                Ok(region)
+            } else {
+                Err("error".into())
+            }
+        }
     }
 }
 
@@ -133,9 +156,9 @@ impl KakaduImageReader {
         Self { span, inner }
     }
 
-    pub fn decompress(&mut self, region: Region) -> KakaduDecompressor {
+    pub fn open(&mut self, region: Region) -> KakaduDecompressor {
         let inner_span = info_span!(parent: self.span.clone(), "decompress", region = ?region);
-        let inner_decompressor = self.inner.pin_mut().decompress(&region);
+        let inner_decompressor = self.inner.pin_mut().open(&region);
 
         KakaduDecompressor::new(inner_decompressor, inner_span)
     }
@@ -155,7 +178,10 @@ pub struct AsyncReader {
 
 impl AsyncReader {
     pub fn new<R: AsyncRead + 'static>(source: R, span: tracing::Span) -> Self {
-        Self { stream: Box::pin(source), span }
+        Self {
+            stream: Box::pin(source),
+            span,
+        }
     }
 }
 
