@@ -19,7 +19,7 @@ private:
     AsyncReaderCompressedSource compressed_source;
     std::shared_ptr<KakaduContext> ctx;
     kdu_supp::jp2_family_src family_source;
-    kdu_supp::jp2_source source;
+    kdu_supp::jpx_source jpx_source;
     kdu_core::kdu_codestream codestream;
 };
 

@@ -15,14 +15,14 @@ KakaduDecompressor::KakaduDecompressor(std::shared_ptr<KakaduContext> ctx, kdu_c
     decompressor.start(codestream,
         &this->channel_mapping,
         -1,
+        0,
         32,
-        1,
         roi,
         kdu_core::kdu_coords(1, 1),
         kdu_core::kdu_coords(1, 1),
-        false,
+        /* precise = */ false,
         kdu_core::KDU_WANT_OUTPUT_COMPONENTS,
-        true,
+        /* fastest = */ true,
         &ctx->threading_env,
         &ctx->threading_queue);
 
@@ -46,8 +46,8 @@ bool KakaduDecompressor::process(rust::Slice<kdu_core::kdu_int32> output, Region
     return incomplete;
 }
 
-bool KakaduDecompressor::finish() {
-    return decompressor.finish();
+bool KakaduDecompressor::finish(kdu_core::kdu_exception &error_code) {
+    return decompressor.finish(&error_code);
 }
 
 }

@@ -54,13 +54,12 @@ mod ffi {
         include!("kaduceus/src/kaduceus.h");
 
         type KakaduDecompressor;
-        fn finish(self: Pin<&mut KakaduDecompressor>) -> bool;
+        fn finish(self: Pin<&mut KakaduDecompressor>, error_code: &mut i32) -> bool;
         fn process(
             self: Pin<&mut KakaduDecompressor>,
             data: &mut [i32],
             output_region: &mut Region,
         ) -> bool;
-
 
         type KakaduContext;
         fn create_kakadu_context() -> SharedPtr<KakaduContext>;
@@ -124,14 +123,16 @@ impl KakaduDecompressor {
         let _process_span = info_span!(parent: &self.span, "process");
         let mut decompressor = self.inner.pin_mut();
         let mut region = Region::default();
+        let incomplete = decompressor.as_mut().process(data, &mut region);
 
-        if decompressor.as_mut().process(data, &mut region) {
-            Ok(region)
+        if incomplete {
+            return Ok(region);
         } else {
-            if decompressor.finish() {
-                Ok(region)
+            let mut _error_code = 0i32;
+            if decompressor.finish(&mut _error_code) {
+                return Ok(region);
             } else {
-                Err("error".into())
+                return Err("Kakadu Decompression error".into());
             }
         }
     }
@@ -186,6 +187,7 @@ impl AsyncReader {
 }
 
 impl AsyncReader {
+    #[tracing::instrument(skip(self, buffer))]
     pub fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
         self.span.in_scope(|| {
             self.span.record("requested", buffer.len());

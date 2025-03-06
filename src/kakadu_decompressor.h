@@ -25,7 +25,7 @@ namespace digirati::kaduceus {
         
         /// @brief 
         /// @return 
-        bool finish();
+        bool finish(kdu_core::kdu_exception &error_code);
 
     private:
         std::shared_ptr<KakaduContext> ctx;
