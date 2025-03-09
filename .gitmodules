@@ -1,4 +1,0 @@
-[submodule "kakadu"]
-	path = kakadu
-	url = git@github.com:digirati-co-uk/kakadu
-	branch = 8.4.1
