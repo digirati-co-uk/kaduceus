@@ -79,6 +79,10 @@ jobs:
 
       - name: Publish
         run: cargo publish --registry=dlcs
+        env:
+          CARGO_REGISTRIES_DLCS_INDEX: "sparse+https://dlcs-spinup-167865917244.d.codeartifact.eu-west-1.amazonaws.com/cargo/private/"
+          CARGO_REGISTRIES_DLCS_CREDENTIAL_PROVIDER: "cargo:token-from-stdout aws codeartifact get-authorization-token --domain dlcs-spinup --domain-owner 167865917244 --region eu-west-1 --query authorizationToken --output text"
+
   clippy:
     name: Clippy
     runs-on: ubuntu-24.04
@@ -91,11 +95,11 @@ jobs:
         with:
           tool: clippy-sarif, sarif-fmt
       - run: cargo clippy --workspace --all-targets --all-features -- -Aunused --message-format=json | clippy-sarif | tee results.sarif | sarif-fmt
-    # Requires GitHub Advanced Security
-    # - name: Upload SARIF file
-    #   uses: github/codeql-action/upload-sarif@v1
-    #   with:
-    #     sarif_file: results.sarif
+      # Requires GitHub Advanced Security
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: results.sarif
 
   fmt:
     name: Formatting

@@ -8,7 +8,6 @@ crate-type = ["rlib"]
 
 [dependencies]
 cxx = { version = "1", features = ["c++20"] }
-image = "0.25.5"
 tokio = { version = "1", features = [
     "rt-multi-thread",
     "io-std",
