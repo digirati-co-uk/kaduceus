@@ -122,11 +122,10 @@ fn main() {
                 if cpu == "native" {
                     build.flag("-march=native");
                 } else {
-                    if let Arch::X64 = arch {
-                        build.flag(format!("-mcpu={}", cpu));
-                    } else {
-                        build.flag(format!("-march={}", cpu));
-                    }
+                    match arch {
+                        Arch::Arm => build.flag(format!("-mcpu={}", cpu)),
+                        Arch::X64 => build.flag(format!("-march={}", cpu)),
+                    };
                 }
             }
             Flag::Codegen { opt, .. } if opt == "linker-plugin-lto" => {
