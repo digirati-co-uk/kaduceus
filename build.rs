@@ -98,7 +98,6 @@ fn main() {
 
     let mut build = cxx_build::bridge("src/lib.rs");
 
-
     build.compiler("clang++");
     build.std("c++20");
     build.flag("-Wno-everything");
@@ -113,14 +112,21 @@ fn main() {
     build.flag("-ffast-math");
     build.static_crt(true);
     build.static_flag(true);
-    
+
     for flag in rustflags::from_env() {
         match flag {
-            Flag::Codegen { opt, value: Some(cpu) } if opt == "target-cpu" => {
+            Flag::Codegen {
+                opt,
+                value: Some(cpu),
+            } if opt == "target-cpu" => {
                 if cpu == "native" {
                     build.flag("-march=native");
                 } else {
-                    build.flag(format!("-mcpu={}", cpu));
+                    if let Arch::X64 = arch {
+                        build.flag(format!("-mcpu={}", cpu));
+                    } else {
+                        build.flag(format!("-march={}", cpu));
+                    }
                 }
             }
             Flag::Codegen { opt, .. } if opt == "linker-plugin-lto" => {
@@ -140,7 +146,6 @@ fn main() {
             build.define("KDU_NEON_INTRINSICS", None);
         }
     }
-
 
     let source_files = glob("src/*.cc").expect("failed to get sources");
     let headers = glob("src/*.h").expect("failed to get headers");
