@@ -129,7 +129,7 @@ fn main() {
                 }
             }
             Flag::Codegen { opt, .. } if opt == "linker-plugin-lto" => {
-                build.flag("-flto");
+                build.flag("-flto=thin");
             }
             _ => continue,
         }
