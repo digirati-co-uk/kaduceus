@@ -14,6 +14,7 @@ public:
 
 protected:
     kdu_core::kdu_long fetch_data(kdu_core::kdu_long max_bytes, kdu_core::kdu_byte* buffer, bool blocking) override;
+
 private:
     rust::Box<AsyncReader> reader_;
 };

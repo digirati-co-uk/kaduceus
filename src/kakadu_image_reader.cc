@@ -35,7 +35,7 @@ KakaduImageReader::KakaduImageReader(std::shared_ptr<KakaduContext> ctx, rust::B
 
 Info KakaduImageReader::info()
 {
-    
+
     auto layer = jpx_source.access_layer(0);
     auto cs = jpx_source.access_codestream(0);
 

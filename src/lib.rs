@@ -9,7 +9,7 @@ use std::error::Error;
 use std::pin::Pin;
 
 use ffi::LogLevel;
-use tokio::io::{AsyncRead, AsyncReadExt};
+use futures::{AsyncRead, AsyncReadExt};
 use tokio::runtime::Builder;
 use tracing::{debug, error, info, info_span, trace, warn, Instrument};
 
@@ -138,26 +138,28 @@ impl KakaduDecompressor {
     }
 }
 
-pub struct KakaduImageReader {
+pub struct KakaduImage {
     pub(crate) inner: cxx::UniquePtr<ffi::KakaduImageReader>,
     pub(crate) span: tracing::Span,
 }
 
-impl KakaduImageReader {
+unsafe impl Send for KakaduImage {}
+
+impl KakaduImage {
     pub fn new(
         ctx: KakaduContext,
-        input: impl AsyncRead + 'static,
+        stream: impl AsyncRead + 'static,
         image_name: Option<String>,
-    ) -> KakaduImageReader {
+    ) -> KakaduImage {
         let span = info_span!("image_reader", image_name = image_name);
         let read_span = info_span!(parent: &span, "read", requested = tracing::field::Empty);
-        let input_reader = Box::new(AsyncReader::new(input, read_span));
+        let input_reader = Box::new(AsyncReader::new(stream, read_span));
         let inner = ffi::create_kakadu_image_reader(ctx.inner, input_reader);
 
         Self { span, inner }
     }
 
-    pub fn open(&mut self, region: Region) -> KakaduDecompressor {
+    pub fn open_region(&mut self, region: Region) -> KakaduDecompressor {
         let inner_span = info_span!(parent: self.span.clone(), "decompress", region = ?region);
         let inner_decompressor = self.inner.pin_mut().open(&region);
 

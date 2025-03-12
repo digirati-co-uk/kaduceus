@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use insta::assert_debug_snapshot;
-use kaduceus::{Info, KakaduContext, KakaduImageReader};
+use kaduceus::{Info, KakaduContext, KakaduImage};
+use tokio_util::compat::TokioAsyncReadCompatExt;
 
 fn image_path(name: &str) -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -24,7 +25,7 @@ fn image_info<P: AsRef<Path>>(path: P) -> Info {
     let file = rt.block_on(async move { tokio::fs::File::open(path).await.unwrap() });
 
     let ctx = KakaduContext::default();
-    let mut reader = KakaduImageReader::new(ctx, file, Some(filename.into()));
+    let mut reader = KakaduImage::new(ctx, file.compat(), Some(filename.into()));
 
     reader.info()
 }

@@ -7,8 +7,7 @@ namespace digirati::kaduceus {
 AsyncReaderCompressedSource::AsyncReaderCompressedSource(rust::Box<AsyncReader>& reader)
     : reader_(std::move(reader))
 {
-   open(true);
-    
+    open(true);
 }
 
 kdu_core::kdu_long AsyncReaderCompressedSource::fetch_data(kdu_core::kdu_long max_bytes,
