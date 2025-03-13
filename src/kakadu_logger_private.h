@@ -37,6 +37,11 @@ public:
         buffer.clear();
     }
 
+    std::string buffered() const&
+    {
+        return buffer.str();
+    }
+
 private:
     std::stringstream buffer;
     LogLevel level;

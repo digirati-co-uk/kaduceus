@@ -5,7 +5,7 @@
 
 namespace digirati::kaduceus {
 
-KakaduDecompressor::KakaduDecompressor(std::shared_ptr<KakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi)
+CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi)
     : codestream(codestream)
     , roi(roi)
 {
@@ -23,13 +23,13 @@ KakaduDecompressor::KakaduDecompressor(std::shared_ptr<KakaduContext> ctx, kdu_c
         /* precise = */ false,
         kdu_core::KDU_WANT_OUTPUT_COMPONENTS,
         /* fastest = */ true,
-        &ctx->threading_env,
+        nullptr,
         &ctx->threading_queue);
 
     incomplete_region.assign(roi);
 }
 
-bool KakaduDecompressor::process(rust::Slice<kdu_core::kdu_int32> output, Region& output_region)
+bool CxxKakaduDecompressor::process(rust::Slice<kdu_core::kdu_int32> output, Region& output_region)
 {
     kdu_core::kdu_dims new_region;
 
@@ -46,7 +46,7 @@ bool KakaduDecompressor::process(rust::Slice<kdu_core::kdu_int32> output, Region
     return incomplete;
 }
 
-bool KakaduDecompressor::finish(kdu_core::kdu_exception& error_code)
+bool CxxKakaduDecompressor::finish(kdu_core::kdu_exception& error_code)
 {
     return decompressor.finish(&error_code);
 }

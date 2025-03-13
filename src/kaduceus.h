@@ -5,6 +5,6 @@
 #include "data_source.h"
 #include "kakadu_context.h"
 #include "kakadu_decompressor.h"
-#include "kakadu_image_reader.h"
+#include "kakadu_image.h"
 
 #endif // KAKADU_RS_H

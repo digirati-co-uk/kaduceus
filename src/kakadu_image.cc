@@ -1,19 +1,19 @@
-#include "kakadu_image_reader.h"
+#include "kakadu_image.h"
 #include "kaduceus/src/lib.rs.h"
 
 #include <format>
 
 namespace digirati::kaduceus {
 
-std::unique_ptr<KakaduDecompressor> KakaduImageReader::open(const struct Region& region)
+std::unique_ptr<CxxKakaduDecompressor> CxxKakaduImage::open(const struct Region& region)
 {
     kdu_core::kdu_dims dims;
     dims.from_u32(region.x, region.y, region.width, region.height);
 
-    return std::make_unique<KakaduDecompressor>(ctx, codestream, dims);
+    return std::make_unique<CxxKakaduDecompressor>(ctx, codestream, dims);
 }
 
-KakaduImageReader::KakaduImageReader(std::shared_ptr<KakaduContext> ctx, rust::Box<AsyncReader>& reader)
+CxxKakaduImage::CxxKakaduImage(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<AsyncReader>& reader)
     : ctx(std::move(ctx))
     , compressed_source(reader)
     , codestream()
@@ -27,15 +27,14 @@ KakaduImageReader::KakaduImageReader(std::shared_ptr<KakaduContext> ctx, rust::B
     auto codestream_source = jpx_source.access_codestream(0);
     auto codestream_source_stream = codestream_source.open_stream();
 
-    codestream.create(codestream_source_stream, &this->ctx->threading_env, &this->ctx->membroker);
+    codestream.create(codestream_source_stream, nullptr, &this->ctx->membroker);
     codestream.set_fast();
     codestream.set_resilient();
     codestream.set_persistent();
 }
 
-Info KakaduImageReader::info()
+Info CxxKakaduImage::info()
 {
-
     auto layer = jpx_source.access_layer(0);
     auto cs = jpx_source.access_codestream(0);
 

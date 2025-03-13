@@ -5,12 +5,12 @@
     clippy::panic,
     clippy::unwrap_used
 )]
-use std::error::Error;
 use std::pin::Pin;
+use std::{error::Error, sync::Arc};
 
 use ffi::LogLevel;
 use futures::{AsyncRead, AsyncReadExt};
-use tokio::runtime::Builder;
+use tokio::runtime::{Builder, Runtime};
 use tracing::{debug, error, info, info_span, trace, warn, Instrument};
 
 #[cxx::bridge(namespace = "digirati::kaduceus")]
@@ -53,34 +53,34 @@ mod ffi {
     unsafe extern "C++" {
         include!("kaduceus/src/kaduceus.h");
 
-        type KakaduDecompressor;
-        fn finish(self: Pin<&mut KakaduDecompressor>, error_code: &mut i32) -> bool;
+        type CxxKakaduDecompressor;
+        fn finish(self: Pin<&mut CxxKakaduDecompressor>, error_code: &mut i32) -> bool;
         fn process(
-            self: Pin<&mut KakaduDecompressor>,
+            self: Pin<&mut CxxKakaduDecompressor>,
             data: &mut [i32],
             output_region: &mut Region,
         ) -> bool;
 
-        type KakaduContext;
-        fn create_kakadu_context() -> SharedPtr<KakaduContext>;
+        type CxxKakaduContext;
+        fn create_kakadu_context() -> SharedPtr<CxxKakaduContext>;
 
-        type KakaduImageReader;
+        type CxxKakaduImage;
         fn create_kakadu_image_reader(
-            ctx: SharedPtr<KakaduContext>,
+            ctx: SharedPtr<CxxKakaduContext>,
             reader: Box<AsyncReader>,
-        ) -> UniquePtr<KakaduImageReader>;
+        ) -> UniquePtr<CxxKakaduImage>;
 
-        fn info(self: Pin<&mut KakaduImageReader>) -> Info;
+        fn info(self: Pin<&mut CxxKakaduImage>) -> Info;
 
         /// Opens the given [Region] of interest for decompression.
-        fn open(self: Pin<&mut KakaduImageReader>, roi: &Region) -> UniquePtr<KakaduDecompressor>;
+        fn open(self: Pin<&mut CxxKakaduImage>, roi: &Region) -> UniquePtr<CxxKakaduDecompressor>;
     }
 }
 
 pub use ffi::{Info, Region};
 
-unsafe impl Sync for ffi::KakaduContext {}
-unsafe impl Send for ffi::KakaduContext {}
+unsafe impl Sync for ffi::CxxKakaduContext {}
+unsafe impl Send for ffi::CxxKakaduContext {}
 
 pub fn log(level: LogLevel, message: &str) {
     match level {
@@ -94,7 +94,7 @@ pub fn log(level: LogLevel, message: &str) {
 
 #[derive(Clone)]
 pub struct KakaduContext {
-    pub(crate) inner: cxx::SharedPtr<ffi::KakaduContext>,
+    pub(crate) inner: cxx::SharedPtr<ffi::CxxKakaduContext>,
 }
 
 impl Default for KakaduContext {
@@ -107,13 +107,13 @@ impl Default for KakaduContext {
 
 #[allow(dead_code)]
 pub struct KakaduDecompressor {
-    pub(crate) inner: cxx::UniquePtr<ffi::KakaduDecompressor>,
+    pub(crate) inner: cxx::UniquePtr<ffi::CxxKakaduDecompressor>,
     pub(crate) span: tracing::Span,
 }
 
 impl KakaduDecompressor {
     pub(crate) fn new(
-        inner: cxx::UniquePtr<ffi::KakaduDecompressor>,
+        inner: cxx::UniquePtr<ffi::CxxKakaduDecompressor>,
         span: tracing::Span,
     ) -> KakaduDecompressor {
         Self { inner, span }
@@ -139,7 +139,7 @@ impl KakaduDecompressor {
 }
 
 pub struct KakaduImage {
-    pub(crate) inner: cxx::UniquePtr<ffi::KakaduImageReader>,
+    pub(crate) inner: cxx::UniquePtr<ffi::CxxKakaduImage>,
     pub(crate) span: tracing::Span,
 }
 
@@ -147,13 +147,14 @@ unsafe impl Send for KakaduImage {}
 
 impl KakaduImage {
     pub fn new(
+        executor: Arc<Runtime>,
         ctx: KakaduContext,
         stream: impl AsyncRead + 'static,
         image_name: Option<String>,
     ) -> KakaduImage {
         let span = info_span!("image_reader", image_name = image_name);
         let read_span = info_span!(parent: &span, "read", requested = tracing::field::Empty);
-        let input_reader = Box::new(AsyncReader::new(stream, read_span));
+        let input_reader = Box::new(AsyncReader::new(executor, stream, read_span));
         let inner = ffi::create_kakadu_image_reader(ctx.inner, input_reader);
 
         Self { span, inner }
@@ -175,13 +176,19 @@ impl KakaduImage {
 }
 
 pub struct AsyncReader {
+    executor: Arc<Runtime>,
     stream: Pin<Box<dyn AsyncRead>>,
     span: tracing::Span,
 }
 
 impl AsyncReader {
-    pub fn new<R: AsyncRead + 'static>(source: R, span: tracing::Span) -> Self {
+    pub fn new<R: AsyncRead + 'static>(
+        executor: Arc<Runtime>,
+        source: R,
+        span: tracing::Span,
+    ) -> Self {
         Self {
+            executor,
             stream: Box::pin(source),
             span,
         }
@@ -194,13 +201,10 @@ impl AsyncReader {
         self.span.in_scope(|| {
             self.span.record("requested", buffer.len());
 
-            let rt = Builder::new_current_thread()
-                .build()
-                .expect("failed to construct lightweight runtime");
-
             let task = async { self.stream.read(buffer).await }.instrument(self.span.clone());
 
-            rt.block_on(task)
+            self.executor
+                .block_on(task)
                 .inspect(|size| info!(size, "read fulfilled"))
                 .inspect_err(|err| error!(?err, "read failed"))
         })
