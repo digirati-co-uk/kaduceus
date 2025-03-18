@@ -29,11 +29,11 @@ CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> c
     incomplete_region.assign(roi);
 }
 
-bool CxxKakaduDecompressor::process(rust::Slice<kdu_core::kdu_int32> output, Region& output_region)
+bool CxxKakaduDecompressor::process(rust::Slice<kdu_core::kdu_byte> output, Region& output_region)
 {
     kdu_core::kdu_dims new_region;
-
-    auto incomplete = decompressor.process(output.data(), *roi.access_pos(), 0, 0, output.length(), incomplete_region, new_region);
+    int chan_offsets[] = { 0, 1, 2,};
+    auto incomplete = decompressor.process(output.data(), &chan_offsets[0], 3, *roi.access_pos(), 0, 0, output.length() / 3, incomplete_region, new_region,8, true, 1, 0, 3);
     auto new_pos = new_region.access_pos();
     auto new_size = new_region.access_size();
 

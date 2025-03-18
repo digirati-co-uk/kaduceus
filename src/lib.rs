@@ -10,8 +10,8 @@ use std::{error::Error, sync::Arc};
 
 use ffi::LogLevel;
 use futures::{AsyncRead, AsyncReadExt};
-use tokio::runtime::{Builder, Runtime};
-use tracing::{debug, error, info, info_span, trace, warn, Instrument};
+use tokio::runtime::Runtime;
+use tracing::{debug, error, info, info_span, trace, warn};
 
 #[cxx::bridge(namespace = "digirati::kaduceus")]
 #[allow(warnings)]
@@ -57,7 +57,7 @@ mod ffi {
         fn finish(self: Pin<&mut CxxKakaduDecompressor>, error_code: &mut i32) -> bool;
         fn process(
             self: Pin<&mut CxxKakaduDecompressor>,
-            data: &mut [i32],
+            data: &mut [u8],
             output_region: &mut Region,
         ) -> bool;
 
@@ -108,19 +108,14 @@ impl Default for KakaduContext {
 #[allow(dead_code)]
 pub struct KakaduDecompressor {
     pub(crate) inner: cxx::UniquePtr<ffi::CxxKakaduDecompressor>,
-    pub(crate) span: tracing::Span,
 }
 
 impl KakaduDecompressor {
-    pub(crate) fn new(
-        inner: cxx::UniquePtr<ffi::CxxKakaduDecompressor>,
-        span: tracing::Span,
-    ) -> KakaduDecompressor {
-        Self { inner, span }
+    pub(crate) fn new(inner: cxx::UniquePtr<ffi::CxxKakaduDecompressor>) -> KakaduDecompressor {
+        Self { inner }
     }
 
-    pub fn process(&mut self, data: &mut [i32]) -> Result<Region, Box<dyn Error + 'static>> {
-        let _process_span = info_span!(parent: &self.span, "process");
+    pub fn process(&mut self, data: &mut [u8]) -> Result<Region, Box<dyn Error + 'static>> {
         let mut decompressor = self.inner.pin_mut();
         let mut region = Region::default();
         let incomplete = decompressor.as_mut().process(data, &mut region);
@@ -153,18 +148,18 @@ impl KakaduImage {
         image_name: Option<String>,
     ) -> KakaduImage {
         let span = info_span!("image_reader", image_name = image_name);
-        let read_span = info_span!(parent: &span, "read", requested = tracing::field::Empty);
+        let read_span = info_span!(parent: &span, "read", bytes_requested = tracing::field::Empty);
         let input_reader = Box::new(AsyncReader::new(executor, stream, read_span));
         let inner = ffi::create_kakadu_image_reader(ctx.inner, input_reader);
 
         Self { span, inner }
     }
 
+    #[tracing::instrument(parent=self.span.clone(), skip(self))]
     pub fn open_region(&mut self, region: Region) -> KakaduDecompressor {
-        let inner_span = info_span!(parent: self.span.clone(), "decompress", region = ?region);
         let inner_decompressor = self.inner.pin_mut().open(&region);
 
-        KakaduDecompressor::new(inner_decompressor, inner_span)
+        KakaduDecompressor::new(inner_decompressor)
     }
 
     pub fn info(&mut self) -> ffi::Info {
@@ -196,12 +191,11 @@ impl AsyncReader {
 }
 
 impl AsyncReader {
-    #[tracing::instrument(skip(self, buffer))]
     pub fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
         self.span.in_scope(|| {
-            self.span.record("requested", buffer.len());
+            self.span.record("bytes_requested", buffer.len());
 
-            let task = async { self.stream.read(buffer).await }.instrument(self.span.clone());
+            let task = async { self.stream.read(buffer).await };
 
             self.executor
                 .block_on(task)

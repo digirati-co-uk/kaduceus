@@ -21,7 +21,7 @@ public:
      */
     explicit CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi);
 
-    bool process(rust::Slice<kdu_core::kdu_int32> output, Region& output_region);
+    bool process(rust::Slice<kdu_core::kdu_byte> output, Region& output_region);
 
     /// @brief
     /// @return
