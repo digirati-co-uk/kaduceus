@@ -30,7 +30,13 @@ CxxKakaduImage::CxxKakaduImage(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<
     codestream.create(codestream_source_stream, nullptr, &this->ctx->membroker);
     codestream.set_fast();
     codestream.set_resilient();
-    codestream.set_persistent();
+}
+
+CxxKakaduImage::~CxxKakaduImage()
+{
+    codestream.destroy();
+    jpx_source.close();
+    family_source.close();
 }
 
 Info CxxKakaduImage::info()

@@ -11,29 +11,45 @@ CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> c
 {
     channel_mapping.configure(codestream);
 
+    thread_env.create();
+
+    for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
+        thread_env.add_thread();
+    }
+
     decompressor.mem_configure(&ctx->membroker);
     decompressor.start(codestream,
         &this->channel_mapping,
         -1,
         0,
-        32,
+        1024,
         roi,
         kdu_core::kdu_coords(1, 1),
         kdu_core::kdu_coords(1, 1),
         /* precise = */ false,
         kdu_core::KDU_WANT_OUTPUT_COMPONENTS,
         /* fastest = */ true,
-        nullptr,
-        &ctx->threading_queue);
+        &thread_env,
+        nullptr);
 
     incomplete_region.assign(roi);
+}
+
+CxxKakaduDecompressor::~CxxKakaduDecompressor()
+{
+    thread_env.cs_terminate(codestream);
+    thread_env.destroy();
 }
 
 bool CxxKakaduDecompressor::process(rust::Slice<kdu_core::kdu_byte> output, Region& output_region)
 {
     kdu_core::kdu_dims new_region;
-    int chan_offsets[] = { 0, 1, 2,};
-    auto incomplete = decompressor.process(output.data(), &chan_offsets[0], 3, *roi.access_pos(), 0, 0, output.length() / 3, incomplete_region, new_region,8, true, 1, 0, 3);
+    int chan_offsets[] = {
+        0,
+        1,
+        2,
+    };
+    auto incomplete = decompressor.process(output.data(), &chan_offsets[0], 3, *roi.access_pos(), 0, 0, output.length() / 3, incomplete_region, new_region, 8, true, 1, 0, 3);
     auto new_pos = new_region.access_pos();
     auto new_size = new_region.access_size();
 
@@ -48,7 +64,9 @@ bool CxxKakaduDecompressor::process(rust::Slice<kdu_core::kdu_byte> output, Regi
 
 bool CxxKakaduDecompressor::finish(kdu_core::kdu_exception& error_code)
 {
-    return decompressor.finish(&error_code);
+    bool success = decompressor.finish(&error_code);
+    decompressor.reset();
+    return success;
 }
 
 }

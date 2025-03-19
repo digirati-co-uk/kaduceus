@@ -20,7 +20,8 @@ public:
      * @param roi the region of interest to decompress
      */
     explicit CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi);
-
+    ~CxxKakaduDecompressor();
+    
     bool process(rust::Slice<kdu_core::kdu_byte> output, Region& output_region);
 
     /// @brief
@@ -34,6 +35,8 @@ private:
     kdu_supp::kdu_region_decompressor decompressor;
     kdu_core::kdu_dims roi;
     kdu_core::kdu_dims incomplete_region;
+    kdu_core::kdu_thread_env thread_env;
+    kdu_core::kdu_thread_queue thread_queue;
 };
 
 }

@@ -2,6 +2,7 @@
 
 #include "rust/cxx.h"
 
+#include <iostream>
 #include <jpx.h>
 #include <kdu_compressed.h>
 
@@ -11,6 +12,7 @@ struct AsyncReader;
 class AsyncReaderCompressedSource final : public kdu_core::kdu_membacked_compressed_source {
 public:
     explicit AsyncReaderCompressedSource(rust::Box<AsyncReader>& reader);
+    virtual ~AsyncReaderCompressedSource() { close(); }
 
 protected:
     kdu_core::kdu_long fetch_data(kdu_core::kdu_long max_bytes, kdu_core::kdu_byte* buffer, bool blocking) override;

@@ -11,7 +11,8 @@ namespace digirati::kaduceus {
 class CxxKakaduImage final {
 public:
     explicit CxxKakaduImage(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<AsyncReader>& reader);
-
+    ~CxxKakaduImage();
+    
     struct Info info();
     std::unique_ptr<CxxKakaduDecompressor> open(const struct Region& region);
 
