@@ -5,7 +5,7 @@
 
 namespace digirati::kaduceus {
 
-CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi)
+CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi, kdu_core::kdu_uint32 scaled_width, kdu_core::kdu_uint32 scaled_height)
     : codestream(codestream)
     , roi(roi)
 {
@@ -17,16 +17,21 @@ CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> c
         thread_env.add_thread();
     }
 
+    auto numerator = kdu_core::kdu_coords(scaled_width, scaled_height);
+    auto denominator = kdu_core::kdu_coords(roi.access_size()->x, roi.access_size()->y);
+
+    kdu_core::kdu_dims dims = decompressor.find_render_dims(roi, kdu_core::kdu_coords(1, 1), numerator, denominator);
+
     decompressor.mem_configure(&ctx->membroker);
     decompressor.start(codestream,
         &this->channel_mapping,
         -1,
         0,
         1024,
-        roi,
-        kdu_core::kdu_coords(1, 1),
-        kdu_core::kdu_coords(1, 1),
-        /* precise = */ false,
+        dims,
+        numerator,
+        denominator,
+        /* precise = */ true,
         kdu_core::KDU_WANT_OUTPUT_COMPONENTS,
         /* fastest = */ true,
         &thread_env,

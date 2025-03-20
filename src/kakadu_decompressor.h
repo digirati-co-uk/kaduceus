@@ -19,9 +19,9 @@ public:
      * @param codestream the codestream to decompress
      * @param roi the region of interest to decompress
      */
-    explicit CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi);
+    explicit CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi, kdu_core::kdu_uint32 scaled_width, kdu_core::kdu_uint32 scaled_height);
     ~CxxKakaduDecompressor();
-    
+
     bool process(rust::Slice<kdu_core::kdu_byte> output, Region& output_region);
 
     /// @brief

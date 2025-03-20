@@ -12,9 +12,9 @@ class CxxKakaduImage final {
 public:
     explicit CxxKakaduImage(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<AsyncReader>& reader);
     ~CxxKakaduImage();
-    
+
     struct Info info();
-    std::unique_ptr<CxxKakaduDecompressor> open(const struct Region& region);
+    std::unique_ptr<CxxKakaduDecompressor> open(const struct Region& region, kdu_core::kdu_uint32 scaled_width, kdu_core::kdu_uint32 scaled_height);
 
 private:
     AsyncReaderCompressedSource compressed_source;

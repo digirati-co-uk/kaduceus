@@ -73,7 +73,12 @@ mod ffi {
         fn info(self: Pin<&mut CxxKakaduImage>) -> Info;
 
         /// Opens the given [Region] of interest for decompression.
-        fn open(self: Pin<&mut CxxKakaduImage>, roi: &Region) -> UniquePtr<CxxKakaduDecompressor>;
+        fn open(
+            self: Pin<&mut CxxKakaduImage>,
+            roi: &Region,
+            scaled_width: u32,
+            scaled_height: u32,
+        ) -> UniquePtr<CxxKakaduDecompressor>;
     }
 }
 
@@ -156,8 +161,16 @@ impl KakaduImage {
     }
 
     #[tracing::instrument(parent=self.span.clone(), skip(self))]
-    pub fn open_region(&mut self, region: Region) -> KakaduDecompressor {
-        let inner_decompressor = self.inner.pin_mut().open(&region);
+    pub fn open_region(
+        &mut self,
+        region: Region,
+        scaled_width: u32,
+        scaled_height: u32,
+    ) -> KakaduDecompressor {
+        let inner_decompressor = self
+            .inner
+            .pin_mut()
+            .open(&region, scaled_width, scaled_height);
 
         KakaduDecompressor::new(inner_decompressor)
     }

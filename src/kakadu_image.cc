@@ -5,12 +5,13 @@
 
 namespace digirati::kaduceus {
 
-std::unique_ptr<CxxKakaduDecompressor> CxxKakaduImage::open(const struct Region& region)
+std::unique_ptr<CxxKakaduDecompressor> CxxKakaduImage::open(const struct Region& region, kdu_core::kdu_uint32 scaled_width, kdu_core::kdu_uint32 scaled_height)
 {
     kdu_core::kdu_dims dims;
     dims.from_u32(region.x, region.y, region.width, region.height);
 
-    return std::make_unique<CxxKakaduDecompressor>(ctx, codestream, dims);
+    
+    return std::make_unique<CxxKakaduDecompressor>(ctx, codestream, dims, scaled_width, scaled_height);
 }
 
 CxxKakaduImage::CxxKakaduImage(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<AsyncReader>& reader)
