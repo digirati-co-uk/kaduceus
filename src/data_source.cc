@@ -25,4 +25,12 @@ kdu_core::kdu_long AsyncReaderCompressedSource::fetch_data(kdu_core::kdu_long ma
     return static_cast<ssize_t>(read);
 }
 
+bool AsyncReaderCompressedSource::seek(kdu_core::kdu_long offset)
+{
+    return kdu_membacked_compressed_source::seek(offset);
+}
+
+kdu_core::kdu_long AsyncReaderCompressedSource::get_pos() {
+    return kdu_membacked_compressed_source::get_pos();
+}
 }
