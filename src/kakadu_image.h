@@ -22,6 +22,12 @@ private:
     kdu_supp::jp2_family_src family_source;
     kdu_supp::jpx_source jpx_source;
     kdu_core::kdu_codestream codestream;
+
+    ::std::uint32_t width;
+    ::std::uint32_t height;
+    ::std::uint32_t tile_width;
+    ::std::uint32_t tile_height;
+    ::std::uint32_t dwt_levels;
 };
 
 std::unique_ptr<CxxKakaduImage> create_kakadu_image_reader(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<AsyncReader> reader);

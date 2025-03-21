@@ -31,10 +31,13 @@ public:
     void flush(bool end_of_message = false)
     {
         if (end_of_message) {
-            log(level, rust::Str(buffer.str()));
+            auto str = buffer.str();
+            log(level, rust::Str(str));
+    
+            buffer.clear();
+            throw std::runtime_error(str);
         }
 
-        buffer.clear();
     }
 
     std::string buffered() const&

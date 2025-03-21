@@ -5,8 +5,8 @@
     clippy::panic,
     clippy::unwrap_used
 )]
-use std::{io::SeekFrom, pin::Pin};
 use std::{error::Error, sync::Arc};
+use std::{io::SeekFrom, pin::Pin};
 
 use ffi::LogLevel;
 use futures::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt};
@@ -44,9 +44,8 @@ mod ffi {
     // Rust types and signatures exposed to C++.
     extern "Rust" {
         type AsyncReader;
-        fn read(&mut self, buffer: &mut [u8]) -> Result<usize>;
+        fn read(&mut self, buffer: &mut [u8]) -> Result<isize>;
         fn seek(&mut self, offset: i64) -> Result<u64>;
-        fn get_pos(&mut self) -> Result<u64>;
 
         fn log(level: LogLevel, message: &str);
     }
@@ -155,12 +154,13 @@ impl KakaduImage {
         image_name: Option<String>,
     ) -> KakaduImage {
         let span = info_span!("image_reader", image_name = image_name);
-        let read_span = info_span!(parent: &span, "read", bytes_requested = tracing::field::Empty);
-        let seek_span = info_span!(parent: &span, "seek", offset = tracing::field::Empty);
-        let input_reader = Box::new(AsyncReader::new(executor, stream, read_span, seek_span));
+        let input_reader = Box::new(AsyncReader::new(executor, stream, span.clone()));
         let inner = ffi::create_kakadu_image_reader(ctx.inner, input_reader);
 
-        Self { span, inner }
+        Self {
+            span: span.clone(),
+            inner,
+        }
     }
 
     #[tracing::instrument(parent=self.span.clone(), skip(self))]
@@ -192,8 +192,7 @@ impl<T: AsyncRead + AsyncSeek> AsyncSeekableRead for T {}
 pub struct AsyncReader {
     executor: Arc<Runtime>,
     stream: Pin<Box<dyn AsyncSeekableRead>>,
-    read_span: tracing::Span,
-    seek_span: tracing::Span,
+    reader_span: tracing::Span,
 }
 
 impl Drop for AsyncReader {
@@ -206,54 +205,49 @@ impl AsyncReader {
     pub fn new<R: AsyncRead + AsyncSeek + 'static>(
         executor: Arc<Runtime>,
         source: R,
-        read_span: tracing::Span,
-        seek_span: tracing::Span,
+        reader_span: tracing::Span,
     ) -> Self {
         Self {
             executor,
             stream: Box::pin(source),
-            read_span,
-            seek_span,
+            reader_span,
         }
     }
 }
 
 impl AsyncReader {
+    #[tracing::instrument(parent=self.reader_span.clone(), skip(self))]
+    pub fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<isize> {
+        info!(buffer_size = buffer.len(), "read requested");
 
-    pub fn get_pos(&mut self) -> std::io::Result<u64> {
-        self.seek_span.record("offset", 0);
+        let task = async {
+            let mut read = 0;
+            while read < buffer.len() {
+                let avail = self.stream.read(&mut buffer[read..]).await?;
+                read += avail;
+                info!(avail, "read cycle");
 
-        let task = async { self.stream.seek(SeekFrom::Current(0)).await };
+                if avail == 0 {
+                    break;
+                }
+            }
+            Ok(read)
+        };
+
+        self.executor
+            .block_on(task)
+            .inspect(|size| info!(size, "read fulfilled"))
+            .inspect_err(|err| error!(?err, "read failed"))
+            .map(|size| if size == 0 { 0 } else { size as isize })
+    }
+
+    #[tracing::instrument(parent=self.reader_span.clone(), skip(self))]
+    pub fn seek(&mut self, offset: i64) -> std::io::Result<u64> {
+        let task = async { self.stream.seek(SeekFrom::Start(offset as u64)).await };
 
         self.executor
             .block_on(task)
             .inspect(|size| info!(size, "seek fulfilled"))
             .inspect_err(|err| error!(?err, "seek failed"))
-    }
-
-    pub fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
-        self.read_span.in_scope(|| {
-            self.read_span.record("bytes_requested", buffer.len());
-
-            let task = async { self.stream.read(buffer).await };
-
-            self.executor
-                .block_on(task)
-                .inspect(|size| info!(size, "read fulfilled"))
-                .inspect_err(|err| error!(?err, "read failed"))
-        })
-    }
-
-    pub fn seek(&mut self, offset: i64) -> std::io::Result<u64> {
-        self.seek_span.in_scope(|| {
-            self.seek_span.record("offset", offset);
-
-            let task = async { self.stream.seek(SeekFrom::Current(offset)).await };
-
-            self.executor
-                .block_on(task)
-                .inspect(|size| info!(size, "seek fulfilled"))
-                .inspect_err(|err| error!(?err, "seek failed"))
-        })
     }
 }

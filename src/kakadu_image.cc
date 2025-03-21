@@ -10,7 +10,6 @@ std::unique_ptr<CxxKakaduDecompressor> CxxKakaduImage::open(const struct Region&
     kdu_core::kdu_dims dims;
     dims.from_u32(region.x, region.y, region.width, region.height);
 
-    
     return std::make_unique<CxxKakaduDecompressor>(ctx, codestream, dims, scaled_width, scaled_height);
 }
 
@@ -25,25 +24,26 @@ CxxKakaduImage::CxxKakaduImage(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<
         throw std::runtime_error(std::format("JP2 source is not a valid image object"));
     }
 
-    auto codestream_source = jpx_source.access_codestream(0);
+    auto layer = jpx_source.access_layer(0);
+    auto channels = layer.access_channels();
+    auto resolution = layer.access_resolution();
+    auto colour = layer.access_colour(0);
+    auto layer_size = layer.get_layer_size();
+
+    int cmp, plt, stream_id=0, fmt;
+
+    if (!channels.get_colour_mapping(0,cmp,plt,stream_id,fmt))
+    { 
+      kdu_core::kdu_uint16 key;
+      channels.get_non_colour_mapping(0,key,cmp,plt,stream_id,fmt);
+    }
+
+    auto codestream_source = jpx_source.access_codestream(layer.get_codestream_id(0));
+    auto palette = codestream_source.access_palette();
     auto codestream_source_stream = codestream_source.open_stream();
 
-    codestream.create(codestream_source_stream, nullptr, &this->ctx->membroker);
-    codestream.set_fast();
-    codestream.set_resilient();
-}
-
-CxxKakaduImage::~CxxKakaduImage()
-{
-    codestream.destroy();
-    jpx_source.close();
-    family_source.close();
-}
-
-Info CxxKakaduImage::info()
-{
-    auto layer = jpx_source.access_layer(0);
-    auto cs = jpx_source.access_codestream(0);
+    codestream = kdu_core::kdu_codestream();
+    codestream.create(codestream_source_stream);
 
     kdu_supp::kdu_channel_mapping channel_mapping;
     channel_mapping.configure(codestream);
@@ -57,12 +57,30 @@ Info CxxKakaduImage::info()
     kdu_core::kdu_dims tile_size;
     codestream.get_tile_dims(kdu_core::kdu_coords(0, 0), -1, tile_size);
 
-    return Info {
-        .width = image_size.access_size()->get_x(),
-        .height = image_size.access_size()->get_y(),
-        .tile_width = tile_size.access_size()->get_x(),
-        .tile_height = tile_size.access_size()->get_y(),
-        .dwt_levels = dwt_levels,
+    width = image_size.access_size()->get_x();
+    height = image_size.access_size()->get_y();
+    tile_width = tile_size.access_size()->get_x();
+    tile_height = tile_size.access_size()->get_y();
+    this->dwt_levels = dwt_levels;
+}
+
+CxxKakaduImage::~CxxKakaduImage()
+{
+    codestream.destroy();
+    jpx_source.close();
+    family_source.close();
+}
+
+Info CxxKakaduImage::info()
+{
+
+    return Info
+    {
+        .width = this->width,
+        .height = this->height,
+        .tile_width = this->tile_width,
+        .tile_height = tile_height,
+        .dwt_levels = dwt_levels
     };
 }
 
