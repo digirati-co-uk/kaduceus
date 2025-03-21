@@ -216,7 +216,7 @@ impl AsyncReader {
 }
 
 impl AsyncReader {
-    #[tracing::instrument(parent=self.reader_span.clone(), skip(self))]
+    #[tracing::instrument(parent=self.reader_span.clone(), skip(self, buffer))]
     pub fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<isize> {
         info!(buffer_size = buffer.len(), "read requested");
 
