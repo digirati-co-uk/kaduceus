@@ -42,7 +42,6 @@ CxxKakaduImage::CxxKakaduImage(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<
     auto palette = codestream_source.access_palette();
     auto codestream_source_stream = codestream_source.open_stream();
 
-    codestream = kdu_core::kdu_codestream();
     codestream.create(codestream_source_stream);
 
     kdu_supp::kdu_channel_mapping channel_mapping;

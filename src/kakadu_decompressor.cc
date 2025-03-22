@@ -11,14 +11,14 @@ CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> c
 {
     channel_mapping.configure(codestream);
 
-    // thread_env.create();
+    thread_env.create();
 
-    // for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
-    //     thread_env.add_thread();
-    // }
+    for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
+        thread_env.add_thread();
+    }
 
-    auto numerator = kdu_core::kdu_coords(1, 1);
-    auto denominator = kdu_core::kdu_coords(1, 1);
+    auto numerator = kdu_core::kdu_coords(scaled_width, scaled_height);
+    auto denominator = kdu_core::kdu_coords(roi.access_size()->x, roi.access_size()->y);
 
     kdu_core::kdu_dims dims = decompressor.find_render_dims(roi, kdu_core::kdu_coords(1, 1), numerator, denominator);
 

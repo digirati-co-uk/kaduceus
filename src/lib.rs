@@ -5,12 +5,13 @@
     clippy::panic,
     clippy::unwrap_used
 )]
-use std::{error::Error, sync::Arc};
+use std::{error::Error, io::ErrorKind, prelude::rust_2024::Future, sync::Arc};
 use std::{io::SeekFrom, pin::Pin};
 
 use ffi::LogLevel;
 use futures::{AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt};
 use tokio::runtime::Runtime;
+use tokio_util::bytes::BytesMut;
 use tracing::{debug, error, info, info_span, trace, warn};
 
 #[cxx::bridge(namespace = "digirati::kaduceus")]
@@ -53,6 +54,10 @@ mod ffi {
     // C++ types and signatures exposed to Rust.
     unsafe extern "C++" {
         include!("kaduceus/src/kaduceus.h");
+
+        // type CxxKakaduCompressedSourceNotifier;
+        // fn notify(self: Pin<&mut CxxKakaduCompressedSourceNotifier>);
+        // fn notify_unblocked(self: Pin<&mut CxxKakaduCompressedSourceNotifier>);
 
         type CxxKakaduDecompressor;
         fn finish(self: Pin<&mut CxxKakaduDecompressor>, error_code: &mut i32) -> bool;
@@ -222,32 +227,60 @@ impl AsyncReader {
 
         let task = async {
             let mut read = 0;
+
             while read < buffer.len() {
-                let avail = self.stream.read(&mut buffer[read..]).await?;
+                let avail = match self.stream.read(&mut buffer[read..]).await {
+                    Ok(v) => v,
+                    Err(e) if e.kind() == ErrorKind::UnexpectedEof => break,
+                    Err(e) => return Err(e),
+                };
+
                 read += avail;
-                info!(avail, "read cycle");
 
                 if avail == 0 {
                     break;
                 }
             }
+
             Ok(read)
         };
 
-        self.executor
-            .block_on(task)
-            .inspect(|size| info!(size, "read fulfilled"))
-            .inspect_err(|err| error!(?err, "read failed"))
-            .map(|size| if size == 0 { 0 } else { size as isize })
+        self.executor.block_on(task).map(|size| size as _)
     }
 
     #[tracing::instrument(parent=self.reader_span.clone(), skip(self))]
     pub fn seek(&mut self, offset: i64) -> std::io::Result<u64> {
-        let task = async { self.stream.seek(SeekFrom::Start(offset as u64)).await };
-
         self.executor
-            .block_on(task)
-            .inspect(|size| info!(size, "seek fulfilled"))
-            .inspect_err(|err| error!(?err, "seek failed"))
+            .block_on(self.stream.seek(SeekFrom::Start(offset as u64)))
+    }
+}
+
+pub trait AsyncCompressedSource {
+    fn read_at<'a, 'b>(
+        &'a mut self,
+        pos: u64,
+        buffer: &'b mut [u8],
+    ) -> impl Future<Output = usize> + 'b
+    where
+        'a: 'b;
+}
+
+pub struct TestCompressedSource {
+    inner: Vec<u8>,
+}
+
+impl AsyncCompressedSource for TestCompressedSource {
+    fn read_at<'a, 'b>(
+        &'a mut self,
+        pos: u64,
+        buffer: &'b mut [u8],
+    ) -> impl Future<Output = usize> + 'b
+    where
+        'a: 'b,
+    {
+        async move {
+            buffer.copy_from_slice(&self.inner);
+            buffer.len()
+        }
     }
 }
