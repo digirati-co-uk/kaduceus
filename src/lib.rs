@@ -200,12 +200,6 @@ pub struct AsyncReader {
     reader_span: tracing::Span,
 }
 
-impl Drop for AsyncReader {
-    fn drop(&mut self) {
-        println!("drop called")
-    }
-}
-
 impl AsyncReader {
     pub fn new<R: AsyncRead + AsyncSeek + 'static>(
         executor: Arc<Runtime>,
