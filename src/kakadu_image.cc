@@ -30,12 +30,11 @@ CxxKakaduImage::CxxKakaduImage(std::shared_ptr<CxxKakaduContext> ctx, rust::Box<
     auto colour = layer.access_colour(0);
     auto layer_size = layer.get_layer_size();
 
-    int cmp, plt, stream_id=0, fmt;
+    int cmp, plt, stream_id = 0, fmt;
 
-    if (!channels.get_colour_mapping(0,cmp,plt,stream_id,fmt))
-    { 
-      kdu_core::kdu_uint16 key;
-      channels.get_non_colour_mapping(0,key,cmp,plt,stream_id,fmt);
+    if (!channels.get_colour_mapping(0, cmp, plt, stream_id, fmt)) {
+        kdu_core::kdu_uint16 key;
+        channels.get_non_colour_mapping(0, key, cmp, plt, stream_id, fmt);
     }
 
     auto codestream_source = jpx_source.access_codestream(layer.get_codestream_id(0));
@@ -73,8 +72,7 @@ CxxKakaduImage::~CxxKakaduImage()
 Info CxxKakaduImage::info()
 {
 
-    return Info
-    {
+    return Info {
         .width = this->width,
         .height = this->height,
         .tile_width = this->tile_width,

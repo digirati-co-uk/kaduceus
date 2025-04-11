@@ -33,11 +33,10 @@ public:
         if (end_of_message) {
             auto str = buffer.str();
             log(level, rust::Str(str));
-    
+
             buffer.clear();
             throw std::runtime_error(str);
         }
-
     }
 
     std::string buffered() const&

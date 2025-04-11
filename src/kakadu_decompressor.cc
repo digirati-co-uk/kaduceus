@@ -3,19 +3,49 @@
 
 #include "kaduceus/src/lib.rs.h"
 
+#include <numeric>
+
 namespace digirati::kaduceus {
 using namespace kdu_core;
 
-// Helper GCD function
-int gcd(int a, int b)
+static void compute_expands(
+    const kdu_dims& roi,
+    unsigned int scaled_width,
+    unsigned int scaled_height,
+    kdu_coords& expand_numerator,
+    kdu_coords& expand_denominator,
+    int& discard_level,
+    int max_discard_levels)
 {
-    while (b != 0) {
-        int temp = b;
-        b = a % b;
-        a = temp;
+    expand_numerator.x = scaled_width;
+    expand_numerator.y = scaled_height;
+
+    const unsigned int roi_x = (unsigned int)roi.size.x;
+    const unsigned int roi_y = (unsigned int)roi.size.y;
+
+    if (scaled_width >= roi_x || scaled_height >= roi_y) {
+        expand_denominator.x = roi.size.x;
+        expand_denominator.y = roi.size.y;
+    } else {
+        int discard_x = std::countl_zero(scaled_width) - std::countl_zero(roi_x);
+        int discard_y = std::countl_zero(scaled_height) - std::countl_zero(roi_y);
+
+        discard_level = std::min(std::min(discard_x, discard_y), max_discard_levels); // TODO use discard_x/y independently?
+
+        unsigned int discarded_roi_x = 1 + ((roi_x - 1) >> discard_level);
+        unsigned int discarded_roi_y = 1 + ((roi_y - 1) >> discard_level);
+
+        if (discarded_roi_x < scaled_width || discarded_roi_y < scaled_height) {
+            discard_level--;
+            discarded_roi_x = 1 + ((roi_x - 1) >> discard_level);
+            discarded_roi_y = 1 + ((roi_y - 1) >> discard_level);
+        }
+
+        expand_denominator.x = discarded_roi_x;
+        expand_denominator.y = discarded_roi_y;
     }
-    return a;
 }
+
 CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> ctx, kdu_core::kdu_codestream codestream, kdu_core::kdu_dims roi, kdu_core::kdu_uint32 scaled_width, kdu_core::kdu_uint32 scaled_height)
     : codestream(codestream)
     , roi(roi)
@@ -23,63 +53,19 @@ CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> c
     channel_mapping.configure(codestream);
 
     thread_env.create();
-
     for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
         thread_env.add_thread();
     }
 
-    double scale_x = (double)scaled_width / roi.size.x;
-    double scale_y = (double)scaled_height / roi.size.y;
-
-    int max_levels = codestream.get_min_dwt_levels();
+    int max_discard_levels = codestream.get_min_dwt_levels();
     int discard_levels = 0;
-
-    while (discard_levels < max_levels && scale_x <= 0.5 && scale_y <= 0.5) {
-        discard_levels++;
-        scale_x *= 2.0;
-        scale_y *= 2.0;
-    }
-
-    // Calculate the rational expansion factors
-    // This is a simplified approach - you may need a better fraction approximation
-    int gcd_x = gcd((int)(scale_x * 1000), 1000);
-    int gcd_y = gcd((int)(scale_y * 1000), 1000);
 
     kdu_coords expand_numerator;
     kdu_coords expand_denominator;
-    expand_numerator.x = (int)(scale_x * 1000) / gcd_x;
-    expand_denominator.x = 1000 / gcd_x;
+    compute_expands(roi, scaled_width, scaled_height, expand_numerator, expand_denominator, discard_levels, max_discard_levels);
 
-    expand_numerator.y = (int)(scale_y * 1000) / gcd_y;
-    expand_denominator.y = 1000 / gcd_y;
-
-    // Verify the results are safe
-    double min_prod, max_x, max_y;
-    decompressor.get_safe_expansion_factors(
-        codestream, NULL, 0, discard_levels,
-        min_prod, max_x, max_y);
-
-    // Adjust if necessary
-    double prod = ((double)expand_numerator.x * expand_numerator.y) / ((double)expand_denominator.x * expand_denominator.y);
-    if (prod < min_prod) {
-        // Scale up to meet minimum
-        double scale = std::sqrt(min_prod / prod);
-        expand_numerator.x = (int)(expand_numerator.x * scale);
-        expand_numerator.y = (int)(expand_numerator.y * scale);
-    }
-
-    if (expand_numerator.x > max_x * expand_denominator.x) {
-        expand_numerator.x = (int)(max_x * expand_denominator.x);
-    }
-
-    if (expand_numerator.y > max_y * expand_denominator.y) {
-        expand_numerator.y = (int)(max_y * expand_denominator.y);
-    }
-
-    kdu_coords ref_subs;
-    codestream.get_subsampling(0, ref_subs, true);
-
-    kdu_core::kdu_dims dims = decompressor.find_render_dims(roi, ref_subs, expand_numerator, expand_denominator);
+    kdu_coords subsampling { 1 << discard_levels, 1 << discard_levels };
+    kdu_dims dims = decompressor.find_render_dims(roi, subsampling, expand_numerator, expand_denominator);
 
     decompressor.mem_configure(&ctx->membroker);
     decompressor.start(codestream,
@@ -90,7 +76,7 @@ CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> c
         dims,
         expand_numerator,
         expand_denominator,
-        /* precise = */ false,
+        /* precise = */ true,
         kdu_core::KDU_WANT_OUTPUT_COMPONENTS,
         /* fastest = */ false,
         nullptr,
