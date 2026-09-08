@@ -47,6 +47,7 @@ fn main() {
         "coresys/transform/avx2_analysis2.cpp",
         "coresys/transform/analysis.cpp",
         "coresys/transform/sse4_multi_transform_local.cpp",
+        "coresys/transform/avx2_multi_transform_local.cpp",
         "coresys/transform/avx2_dwt_local.cpp",
         "coresys/transform/avx2_synthesis2.cpp",
         "coresys/transform/ssse3_colour_local.cpp",
