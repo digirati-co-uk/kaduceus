@@ -79,7 +79,7 @@ CxxKakaduDecompressor::CxxKakaduDecompressor(std::shared_ptr<CxxKakaduContext> c
         /* precise = */ true,
         kdu_core::KDU_WANT_OUTPUT_COMPONENTS,
         /* fastest = */ false,
-        nullptr,
+        &thread_env,
         nullptr);
 
     incomplete_region.assign(roi);
