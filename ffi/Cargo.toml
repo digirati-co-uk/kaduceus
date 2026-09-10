@@ -1,0 +1,23 @@
+[package]
+name    = "kdu-facade"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+# The C ABI jpjp loads. cdylib = a plain shared library with no Rust-specific metadata, so
+# NativeLibrary.Load + DllImport can bind to it directly.
+name       = "kdu_facade"
+crate-type = ["cdylib"]
+
+[dependencies]
+kaduceus = { path = ".." }
+futures  = "0.3"
+tokio    = { version = "1", features = ["rt-multi-thread"] }
+
+[profile.release]
+opt-level = 3
+lto       = "fat"
+# panic = "abort" would be WRONG here: the ABI contract is that nothing escapes and every failure
+# comes back as a status code, which needs catch_unwind, which needs unwinding to exist.
+panic     = "unwind"

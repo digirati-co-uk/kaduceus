@@ -20,7 +20,11 @@
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
 
-/target
+# Unanchored, deliberately: the anchored "/target" this replaces did NOT cover ffi/target, and a
+# plain  would therefore have staged ffi/target/release/libkdu_facade.so — a binary
+# that statically links Kakadu, i.e. an "Application" under clause 13.1(b) of the Kakadu licence.
+# That must never be committed, published, or made available to an AI tool.
+target/
 /.cache/
 *.obj
 
@@ -28,3 +32,5 @@ compile_commands.json
 compile_commands.events.json
 
 lcov.info
+
+.vscode
