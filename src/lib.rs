@@ -116,31 +116,89 @@ impl Default for KakaduContext {
     }
 }
 
+/// A decode in progress.
+///
+/// ⚠️ **`finish()` must run before the C++ destructor.** Kakadu requires the decompressor to be
+/// finished — outstanding thread work retired — before its thread group is torn down; destroying an
+/// unfinished decompressor trips an internal assertion in `kdu_thread_context::leave_group` ("a
+/// group left with a lock still held"). Under concurrency that aborts the process.
+///
+/// Previously `finish()` was called only in the branch of `process()` where the decode reported
+/// itself complete. Every other exit — an error out of `process()`, an error raised by the caller,
+/// a decode abandoned part-way — dropped the `UniquePtr` and ran `~CxxKakaduDecompressor` with no
+/// `finish()` at all. The `Drop` below closes that gap, which makes this type behave like
+/// Cantaloupe's `AutoCloseable` reader: ordered teardown on *every* path, not just the happy one.
 #[allow(dead_code)]
 pub struct KakaduDecompressor {
     pub(crate) inner: cxx::UniquePtr<ffi::CxxKakaduDecompressor>,
+    /// Set the moment a finish is *attempted*, not when one succeeds — a failed finish must never
+    /// be retried, least of all from `drop()`.
+    finished: bool,
 }
 
 impl KakaduDecompressor {
     pub(crate) fn new(inner: cxx::UniquePtr<ffi::CxxKakaduDecompressor>) -> KakaduDecompressor {
-        Self { inner }
+        Self {
+            inner,
+            finished: false,
+        }
+    }
+
+    /// Has this decode completed (or been finished explicitly)?
+    ///
+    /// Callers should prefer this to inferring completion from an empty `Region`: an empty region
+    /// is a *proxy* for the completion flag, and the two need not coincide.
+    pub fn is_finished(&self) -> bool {
+        self.finished
+    }
+
+    /// Retire the decode. Idempotent, and safe to call before dropping.
+    pub fn finish(&mut self) -> Result<(), Box<dyn Error + 'static>> {
+        self.finish_once()
+    }
+
+    fn finish_once(&mut self) -> Result<(), Box<dyn Error + 'static>> {
+        if self.finished || self.inner.is_null() {
+            return Ok(());
+        }
+        self.finished = true;
+        let mut error_code = 0i32;
+        if self.inner.pin_mut().finish(&mut error_code)? {
+            Ok(())
+        } else {
+            Err(format!("Kakadu decompression error (code {error_code})").into())
+        }
     }
 
     pub fn process(&mut self, data: &mut [u8]) -> Result<Region, Box<dyn Error + 'static>> {
-        let mut decompressor = self.inner.pin_mut();
+        // ⚠️ Calling into a finished C++ decompressor may abort the process (see
+        // `examples/probe.rs`). Turn that into an ordinary Rust error instead.
+        if self.finished {
+            return Err("process() called on a decompressor that has already finished".into());
+        }
+
         let mut region = Region::default();
-        let incomplete = decompressor.as_mut().process(data, &mut region)?;
+        let incomplete = self.inner.pin_mut().process(data, &mut region)?;
 
         if incomplete {
             return Ok(region);
-        } else {
-            let mut _error_code = 0i32;
-            if decompressor.finish(&mut _error_code)? {
-                return Ok(region);
-            } else {
-                return Err("Kakadu Decompression error".into());
-            }
         }
+
+        // Complete: finish now, while we are still on a path that can report an error properly.
+        self.finish_once()?;
+        Ok(region)
+    }
+}
+
+impl Drop for KakaduDecompressor {
+    fn drop(&mut self) {
+        // The safety net for every path `process()` does not reach: errors, early returns,
+        // abandonment. `finish_once` is idempotent and marks itself before calling through, so a
+        // failing finish cannot loop.
+        //
+        // ⚠️ A panic in `drop` during unwinding aborts the process, so the result is deliberately
+        // discarded — by the time we are here there is nobody left to report it to.
+        let _ = self.finish_once();
     }
 }
 

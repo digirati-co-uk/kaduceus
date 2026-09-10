@@ -90,6 +90,10 @@ fn runtime() -> Arc<Runtime> {
 }
 
 /// One Kakadu context for the process — `Send + Sync` and cheap to clone.
+///
+/// ⚠️ Sharing this across concurrent decodes was TESTED as a cause of the concurrent-region abort on
+/// 2026-09-10 and **eliminated**: a temporary build giving every decode its own fresh context aborted
+/// identically at `t512` concurrency 8. Keep the singleton; it is not implicated.
 fn context() -> KakaduContext {
     static CTX: OnceLock<KakaduContext> = OnceLock::new();
     CTX.get_or_init(KakaduContext::default).clone()
@@ -260,6 +264,9 @@ fn decode_inner(
     let out_w = req.region_w as usize;
     let out_h = req.region_h as usize;
 
+    // ⚠️ Serialising decompressor CONSTRUCTION was tested here on 2026-09-10 and made no difference
+    // to the concurrent-region abort — the failure threshold was identical with and without. So
+    // concurrent creation of thread environments is not the trigger either. Diagnostic removed.
     let mut decompressor = image
         .open_region(roi, req.region_w as u32, req.region_h as u32)
         .map_err(FacadeError::codestream)?;
@@ -276,8 +283,16 @@ fn decode_inner(
     loop {
         let r = decompressor.process(&mut strip).map_err(FacadeError::codestream)?;
 
-        // Empty region = finished. The only completion signal kaduceus offers.
-        if r.width == 0 || r.height == 0 {
+        // ⚠️ An empty region used to be the ONLY completion signal kaduceus offered, so this loop
+        // inferred completion from it. That is a proxy for the flag, not the flag: if the final
+        // call ever returned a non-empty strip, the loop went round once more and called into a
+        // decompressor that had already finished — which `examples/probe.rs` warns may abort the
+        // process. `is_finished()` now exposes the real thing; the empty-region test is kept as a
+        // belt-and-braces exit, not as the primary signal.
+        let finished = decompressor.is_finished();
+        let empty = r.width == 0 || r.height == 0;
+
+        if empty {
             break;
         }
 
@@ -306,7 +321,9 @@ fn decode_inner(
         scatter_strip(&strip, planes, ncomp, bpp, out_w, sw, sh, y0);
         rows_done = rows_done.max(y0 + sh);
 
-        if rows_done >= out_h {
+        // ⭐ The real completion signal, checked AFTER scattering: the call that reports the decode
+        // complete may still carry the last strip, and dropping it would truncate the image.
+        if finished || rows_done >= out_h {
             break;
         }
 
